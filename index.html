@@ -51,8 +51,9 @@
         .avatar-box img { width: 100%; height: 100%; object-fit: cover; }
 
         .rules-card { background: white; padding: 20px; border-radius: 20px; border-left: 5px solid var(--rose); }
-        .rules-card h2 { margin: 0 0 10px; font-size: 1.1rem; }
-        .rules-card ol { font-size: 0.85rem; line-height: 1.6; padding-left: 20px; margin: 0; color: #666; }
+        .rules-card h2 { margin: 0 0 10px; font-size: 1rem; }
+        /* 微調：規則文字小一點點 */
+        .rules-card ol { font-size: 0.75rem; line-height: 1.6; padding-left: 20px; margin: 0; color: #666; }
 
         /* --- 賓果頁 --- */
         #bingo-capture-zone { background: linear-gradient(135deg, var(--rose), var(--serenity)); border-radius: 30px; padding: 50px 25px; text-align: center; color: white; position: relative; overflow: hidden; }
@@ -80,7 +81,6 @@
         .btn { padding: 14px; border-radius: 50px; border: none; font-weight: 900; cursor: pointer; font-size: 0.9rem; text-decoration: none; display: flex; align-items: center; justify-content: center; }
         .btn-rose { background: var(--rose); color: white !important; }
         .btn-serenity { background: var(--serenity); color: white !important; }
-        /* 修正點 2：強制保持黑色 */
         .btn-white { background: white; border: 1px solid #eee; color: var(--dark) !important; }
         
         .bias-toggle-btn { width: 65px; height: 65px; border-radius: 50%; border: 3px solid white; background: white; cursor: pointer; overflow: hidden; margin: 10px auto; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
@@ -129,7 +129,8 @@
             <div class="rules-card">
                 <h2>💎 遊戲規則</h2>
                 <ol>
-                    <li>填寫目標後按下「隨機並鎖定」位置即固定，內容也不能更動。</li>
+                    <li>選擇玩家後進入個人頁，點擊預設頭貼可自行上傳圖片。</li>
+                    <li>填寫目標後按下「隨機並鎖定」位置即固定，文字無法編輯。</li>
                     <li>每當完成一格目標，點擊格子即蓋章，連線成功有小驚喜。</li>
                     <li>長按格子可記錄個人心情紀錄或執行進度。</li>
                     <li>點擊Minitten可切換不同成員印章。</li>
