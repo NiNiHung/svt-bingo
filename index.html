@@ -6,29 +6,25 @@
     <title>SVT CARAT 2026 BINGO</title>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Noto+Sans+TC:wght@500;700;900&family=Shadows+Into+Light&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Noto+Sans+TC:wght@500;700;900&display=swap" rel="stylesheet">
     
     <style>
-        /* --- 核心應援色變數 --- */
         :root {
             --rose: #F7CAC9;
-            --rose-dark: #C62828; /* 酒紅文字 */
             --serenity: #92A8D1;
-            --serenity-yellow: #FFFF33; /* 螢光黃文字 */
+            --bg-pure-white: #FFFFFF; /* 純白背景 */
             --dark: #2D2D2D;
-            --bg-white: #FFFFFF; /* 純白背景 */
-            
-            /* 紙張噪點與手繪塗鴉質感 */
-            --paper-texture: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" stitchTiles="stitch"/></filter><rect width="100" height="100" filter="url(%23noise)" opacity="0.1" fill="white"/></svg>');
+            --dark-gray: #555555; /* 白底上的深灰色字 */
+            --card-bg: #FFFFFF;
+            --glass: rgba(255, 255, 255, 0.3);
         }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         
         body { 
-            margin: 0; padding: 0; min-height: 100vh;
-            background-color: var(--bg-white); /* 純白背景 */
+            margin: 0; padding: 0; 
+            background-color: var(--bg-pure-white); /* 1. 背景變純白 */
             font-family: 'Noto Sans TC', sans-serif; color: var(--dark);
-            overflow-x: hidden;
             display: flex; flex-direction: column; align-items: center;
         }
 
@@ -37,116 +33,134 @@
         .page.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        .container { width: 92%; margin: 15px auto; display: flex; flex-direction: column; gap: 15px; position: relative; }
+        .container { width: 92%; margin: 15px auto; display: flex; flex-direction: column; gap: 15px; }
         
         /* ==========================================
-           首頁: 手寫風主標與倒數
+           首頁: 排版優化 (Anton 字體與深灰文字)
            ========================================== */
-        .sc-hero { text-align: center; margin-bottom: 30px; }
-        .sc-hero-my { font-family: 'Shadows Into Light', cursive; font-size: 1.8rem; vertical-align: middle; }
-        .sc-hero-year { display: inline-flex; gap: 5px; vertical-align: middle; font-size: 3rem; font-weight: 900; line-height: 1; }
-        .year-dig { padding: 5px 10px; border: 2px solid var(--dark); box-shadow: 3px 3px 0 rgba(0,0,0,0.1); background: #fff; }
-        .sc-hero-wishlist { font-family: 'Noto Sans TC', sans-serif; font-weight: 900; font-size: 1.8rem; margin-top: 10px; text-transform: lowercase; }
-
-        /* 背景散落的手繪鑽石 */
-        .bg-doodles {
-            position: absolute; width: 100%; height: 100%; top: 0; left: 0; pointer-events: none; opacity: 0.15; z-index: -1;
-            background-image: 
-                url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M50 5 L95 40 L70 95 L30 95 L5 40 Z" fill="none" stroke="%23333" stroke-width="2"/></svg>'),
-                url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M50 15 L85 45 L70 85 L30 85 L15 45 Z" fill="none" stroke="%23333" stroke-width="1.5"/></svg>');
-            background-size: 60px 60px, 40px 40px; background-position: 10% 20%, 85% 60%; background-repeat: no-repeat;
+        .hero-section {
+            display: grid; grid-template-columns: 1fr 1.2fr;
+            background: white; border-radius: 30px; overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.03); border: 1px solid #eee;
         }
+        .hero-left { 
+            background: linear-gradient(135deg, var(--rose), var(--serenity)); 
+            display: flex; align-items: center; justify-content: center; padding: 30px;
+        }
+        
+        .avatar-group { display: flex; align-items: center; justify-content: center; position: relative; }
+        .avatar-on-hero { width: 75px; height: 75px; background: white; border-radius: 50%; overflow: hidden; position: relative; border: 4px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.08); display: flex; align-items: center; justify-content: center; font-size: 2rem; color: #ccc; }
+        .avatar-on-hero img { width: 100%; height: 100%; object-fit: cover; }
+        .avatar-on-hero img[src=""] { display: none; }
+
+        .hero-right { padding: 30px; display: flex; flex-direction: column; justify-content: center; }
+        .tag { background: var(--rose); color: white; padding: 4px 15px; border-radius: 20px; font-weight: 900; width: fit-content; margin-bottom: 10px; font-size: 0.8rem; }
+        
+        /* 標題與其他白底文字改為深灰色 */
+        .hero-right h1 { font-family: 'Anton', sans-serif; font-size: 2.2rem; margin: 0; line-height: 1.1; color: var(--dark-gray); text-transform: uppercase; letter-spacing: -1px; }
+        .hero-right h1 span { color: var(--serenity); }
+        .deadline-card span { font-size: 0.6rem; color: #bbb; font-weight: 700; letter-spacing: 1px; }
+        .deadline-date { font-size: 1.2rem; font-weight: 900; color: var(--dark-gray); } /* 深灰 */
 
         .countdown-section { display: grid; grid-template-columns: 1fr; gap: 10px; }
-        .deadline-card { background: white; border-radius: 20px; padding: 15px; border-left: 8px solid var(--rose); text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.03); }
+        .deadline-card { background: white; border-radius: 20px; padding: 15px; border-left: 8px solid var(--rose); text-align: center; border: 1px solid #eee; }
         .timer-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-        .timer-box { background: white; border-radius: 15px; padding: 10px; text-align: center; border: 1.5px solid var(--serenity); }
+        .timer-box { background: white; border-radius: 15px; padding: 10px; text-align: center; border: 2.5px solid var(--serenity); }
         .timer-num { font-size: 1.2rem; font-weight: 900; display: block; color: var(--serenity); }
+        .timer-label { font-size: 0.6rem; color: #bbb; font-weight: 700; }
 
-        /* 玩家列表 */
+        /* 玩家列表 (深灰文字) */
         .player-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 10px 0; }
-        .player-card { background: white; border-radius: 20px; padding: 15px 10px; text-align: center; cursor: pointer; border: 1.5px solid transparent; box-shadow: 0 4px 10px rgba(0,0,0,0.03); }
-        .p-avatar { 
-            width: 60px; height: 60px; background: #eee; border-radius: 50%; margin: 0 auto 10px; overflow: hidden; position: relative; border: 2px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.05); 
-            display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: #aaa;
-        }
-        .p-avatar img { width: 100%; height: 100%; object-fit: cover; }
-        .player-name { font-weight: 900; font-size: 0.9rem; }
+        .player-card { background: white; border-radius: 20px; padding: 15px 10px; text-align: center; cursor: pointer; transition: 0.3s; border: 1.5px solid #eee; }
+        .player-card:hover { border-color: var(--rose); transform: translateY(-3px); }
+        .avatar-box { width: 60px; height: 60px; background: #eee; border-radius: 50%; margin: 0 auto 10px; overflow: hidden; position: relative; border: 2px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: #aaa; }
+        .avatar-box img { width: 100%; height: 100%; object-fit: cover; }
+        .avatar-box img[src=""] { display: none; }
+        .player-name { font-weight: 900; font-size: 0.9rem; color: var(--dark-gray); } /* 深灰 */
+
+        /* 遊戲規則 (深灰文字) */
+        .rules-card { background: white; border-radius: 25px; padding: 25px; border: 1px solid #eee; }
+        .rules-card h2 { margin: 0 0 15px; font-size: 1.2rem; font-weight: 900; color: var(--dark-gray); } /* 深灰 */
+        .rules-card ol { padding-left: 18px; font-size: 0.85rem; line-height: 1.8; color: var(--dark-gray); font-weight: 500; } /* 深灰 */
 
         /* ==========================================
-           賓果盤頁面: 毛玻璃與應援色交錯
+           賓果盤頁面: 應援色交錯與手繪星星
            ========================================== */
         #bingo-capture-zone { 
-            background: var(--bg-white); /* 純白背景 */
-            padding: 40px 15px; border-radius: 30px; text-align: center; color: var(--dark);
-            position: relative; box-shadow: inset 0 0 30px rgba(0,0,0,0.02);
+            background: var(--bg-pure-white); /* 1. 背景變純白 */
+            border-radius: 30px; padding: 40px 20px; text-align: center; color: var(--dark);
+            border: 1px solid #eee;
         }
         
-        /* 純白背景上的噪點質感 */
-        #bingo-capture-zone::before {
-            content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background-image: var(--paper-texture); opacity: 0.3; border-radius: 30px; z-index: -1;
-        }
+        /* 純白背景上的深灰字 */
+        #bingo-capture-zone h2 { font-weight: 900; font-size: 1.6rem; color: var(--dark-gray); }
+        #bingo-capture-zone div[style*="font-weight:700"] { color: #888; }
 
         .avatar-box-lg { 
-            width: 100px; height: 100px; background: white; border-radius: 50%; margin: 0 auto 10px; 
-            overflow: hidden; border: 5px solid white; box-shadow: 0 5px 20px rgba(0,0,0,0.08); 
-            cursor: pointer; position: relative; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; color: #ccc;
+            width: 90px; height: 90px; background: white; border-radius: 50%; margin: 0 auto 10px; 
+            overflow: hidden; border: 5px solid white; box-shadow: 0 8px 20px rgba(0,0,0,0.1); 
+            display: flex; align-items: center; justify-content: center; font-size: 2.5rem; color: #ccc; cursor: pointer;
         }
         .avatar-box-lg img { width: 100%; height: 100%; object-fit: cover; }
+        .avatar-box-lg img[src=""] { display: none; }
 
-        /* 毛玻璃不規則格子與應援色交錯 */
+        /* 應援色實心底與白字排列 */
         .bingo-board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 100%; aspect-ratio: 1/1; margin-top: 25px; }
         .cell {
             background: var(--glass); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
             border-radius: 15px; border: 1px solid rgba(255,255,255,0.4);
             display: flex; align-items: center; justify-content: center; padding: 8px;
-            position: relative; transition: 0.2s;
-            /* 預設不規則形狀 */
-            border-radius: 25% 30% 20% 35% / 30% 25% 35% 20%;
+            position: relative; overflow: hidden;
+            border-radius: 20px; /* 統一格子圓潤感 */
         }
-
-        /* 奇數格: Rose Quartz (實心底) + 酒紅文字 */
-        .cell:nth-child(odd) { 
-            background: var(--rose) !important; color: var(--rose-dark) !important;
-        }
-        .cell:nth-child(odd) textarea, .cell:nth-child(odd) .cell-text { color: var(--rose-dark) !important; }
-
-        /* 偶數格: Serenity (實心底) + 螢光黃文字 */
-        .cell:nth-child(even) { 
-            background: var(--serenity) !important; color: var(--serenity-yellow) !important;
-        }
-        .cell:nth-child(even) textarea, .cell:nth-child(even) .cell-text { color: var(--serenity-yellow) !important; text-shadow: 1px 1px 0 rgba(0,0,0,0.1); }
-
-        /* 中央格強化 (純白實心) */
-        .cell:nth-child(5) { 
-            background: white !important; 
-            color: var(--rose-dark) !important;
-            border: 2px solid var(--serenity) !important;
-            border-radius: 35% 20% 35% 25% / 25% 35% 20% 35%;
-        }
-        .cell:nth-child(5) textarea, .cell:nth-child(5) .cell-text { color: var(--rose-dark) !important; font-size: 1.1rem; }
-
-        .cell.marked { filter: brightness(0.9); }
         
+        /* 3. 配色排列但保持交錯 */
+        /* 奇數格: Rose Quartz (實心粉底) */
+        .cell:nth-child(odd) { background-color: var(--rose); color: white; }
+        /* 偶數格: Serenity (實心藍底) */
+        .cell:nth-child(even) { background-color: var(--serenity); color: white; }
+
+        /* 輸入白字 */
+        .cell textarea, .cell-text { color: white !important; font-weight: 700; text-align: center; }
+
+        /* 被標記時的底色 */
+        .cell.marked { filter: brightness(0.95); border: 2.5px solid white; }
+        .cell.marked:nth-child(odd) { background-color: #f2b1af; } /* 標記後的實心粉 */
+        .cell.marked:nth-child(even) { background-color: #7b94c4; } /* 標記後的實心藍 */
+
+        /* 2. 中央格：手繪感星星 (仿圖1、圖2) */
+        .cell:nth-child(5) {
+            background-color: transparent; border: none;
+            clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+            -webkit-clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+            /* 手繪星星感：用應援漸層填充 */
+            background: linear-gradient(135deg, var(--rose), var(--serenity)) !important;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        /* 中央格文字處理：純白大字 */
+        .cell:nth-child(5) textarea, .cell:nth-child(5) .cell-text { font-family: 'Anton', sans-serif; font-size: 1.2rem; text-transform: uppercase; letter-spacing: 0.5px; }
+
         .cell textarea {
             width: 100%; height: 100%; background: transparent; border: none;
-            text-align: center; font-weight: 700; font-size: 1rem; resize: none; color: inherit; 
-            font-family: inherit; display: flex; align-items: center; justify-content: center;
+            resize: none; outline: none; font-family: inherit; font-size: 1rem;
+            display: flex; align-items: center; justify-content: center;
             padding: 0; line-height: 1.2;
             padding-top: calc(50% - 0.6em); /* 文字垂直置中 */
         }
-        .cell-text { width: 100%; font-weight: 900; font-size: 1rem; line-height: 1.3; word-break: break-all; }
+        .cell textarea::placeholder { color: rgba(255,255,255,0.7); }
+        
+        .cell-text { font-weight: 900; font-size: 1rem; line-height: 1.3; word-break: break-all; }
         .stamp { position: absolute; font-size: 3rem; opacity: 0.8; pointer-events: none; }
 
-        .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 20px 0; max-width: 400px; margin-left: auto; margin-right: auto; }
+        .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 20px 0; }
         .btn { padding: 12px; border-radius: 50px; border: none; font-weight: 900; cursor: pointer; font-size: 0.85rem; font-family: inherit; transition: 0.3s; }
+        .btn:hover { opacity: 0.8; }
         .btn-full { grid-column: span 2; }
-        .btn-rose { background: var(--rose); color: white; border: 2px solid #fff; box-shadow: 4px 4px 0 #888; }
-        .btn-serenity { background: var(--serenity); color: white; border: 2px solid #fff; box-shadow: 4px 4px 0 #888; }
+        .btn-rose { background: var(--rose); color: white; border: 2px solid white; box-shadow: 4px 4px 0 rgba(0,0,0,0.1); }
+        .btn-serenity { background: var(--serenity); color: white; border: 2px solid white; box-shadow: 4px 4px 0 rgba(0,0,0,0.1); }
         .btn-white { background: white; color: var(--dark); border: 2px solid #ddd; }
 
-        .upload-hint { font-size: 0.6rem; color: #888; margin-top: 5px; cursor: pointer; text-decoration: underline; }
+        .upload-hint { font-size: 0.6rem; color: #999; margin-top: 5px; cursor: pointer; text-decoration: underline; }
 
         @media (max-width: 600px) {
             #bingo-capture-zone { border-radius: 0; }
@@ -157,20 +171,23 @@
 
     <div id="page-home" class="page active">
         <div class="container">
-            <div class="sc-hero">
-                <span class="sc-hero-my">my</span>
-                <div class="sc-hero-year">
-                    <span class="year-dig" style="color:var(--rose)">2</span>
-                    <span class="year-dig" style="color:var(--serenity)">0</span>
-                    <span class="year-dig" style="color:var(--rose)">2</span>
-                    <span class="year-dig" style="color:var(--serenity)">6</span>
+            <div class="hero-section">
+                <div class="hero-left">
+                    <div class="avatar-group">
+                        <div class="avatar-on-hero" style="z-index:3;">💎<img id="h-img-0" src="" alt=""></div>
+                        <div class="avatar-on-hero" style="margin-left:-30px; z-index:2; transform:scale(0.9);">💎<img id="h-img-1" src="" alt=""></div>
+                        <div class="avatar-on-hero" style="margin-left:-30px; z-index:1; transform:scale(0.8);">💎<img id="h-img-2" src="" alt=""></div>
+                    </div>
                 </div>
-                <div class="sc-hero-wishlist">wishlist</div>
+                <div class="hero-right">
+                    <div class="tag">2026 CARAT 目標</div>
+                    <h1>9 宮格<span>賓果</span> CHALLENGE</h1>
+                </div>
             </div>
 
             <div class="countdown-section">
                 <div class="deadline-card">
-                    <span style="font-size:0.7rem; color:#999; font-weight:700;">DEADLINE</span>
+                    <span>📅 DEADLINE</span>
                     <div class="deadline-date">2026 / 07 / 31</div>
                 </div>
                 <div class="timer-grid">
@@ -184,29 +201,27 @@
             <div class="player-grid" id="player-list"></div>
 
             <div class="rules-card">
-                <h2>📜 GAME RULES · 遊戲規則</h2>
+                <h2>📜 CARAT 遊戲規則 (深灰文字)</h2>
                 <ol>
-                    <li>每人選一隻代表成員貼紙，點擊進入賓果盤挑戰賽</li>
-                    <li>寫下 <b>9 個</b>想達成的挑戰目標，中央 FREE 格開放自定義</li>
-                    <li>「鎖定」內容開始遊戲。雙擊格子蓋上本命印記，即可標記達成</li>
-                    <li>橫 / 直 / 斜任意 3 格連成一線即為 Bingo，截止日連線最多者贏！</li>
+                    <li>選取一玩家進入專屬賓果盤</li>
+                    <li>石英粉與寧靜藍實心格交錯排列，輸入白字挑戰項目</li>
+                    <li>中央格為「手繪漸層星星」自由格，點擊編輯內容</li>
+                    <li>按「鎖定」內容開始遊戲，雙擊格子蓋章連線挑戰</li>
                 </ol>
             </div>
-            
-            <div class="bg-doodles"></div>
         </div>
     </div>
 
     <div id="page-bingo" class="page">
         <div class="container">
-            <button class="btn btn-white" onclick="showHome()">← 返回名單</button>
+            <button class="btn btn-white" onclick="showHome()">← 返回列表</button>
             
             <div id="bingo-capture-zone">
                 <div class="avatar-box-lg" onclick="triggerUpload()">
                     💎<img id="current-avatar-img" src="" alt="" style="display:none;">
                 </div>
-                <div class="upload-hint" onclick="triggerUpload()">點擊上傳貼紙照片</div>
-                <h2 id="current-player-name" style="margin:5px 0; font-weight:900; font-size: 1.6rem;">PLAYER</h2>
+                <div class="upload-hint" onclick="triggerUpload()">點擊更換頭像貼紙</div>
+                <h2 id="current-player-name" style="margin:5px 0;">PLAYER (深灰)</h2>
                 <div style="font-weight:700; opacity:0.8; font-size:0.8rem; letter-spacing:2px; margin-bottom:20px;">SVT BINGO CHALLENGE</div>
 
                 <div class="bingo-board" id="bingo-grid"></div>
@@ -218,19 +233,19 @@
                 <select id="bias-select" class="btn btn-white btn-full" onchange="updateBias()">
                     <option value="🍊">蓋章：勝寛 🍊</option>
                     <option value="🐯">蓋章：Hoshi 🐯</option>
-                    <option value="🍚">蓋章：Woozi 🍚</option>
-                    <option value="👼">蓋章：淨漢 👼</option>
+                    <option value="🍚">蓋章：Woozi Rice🍚</option>
+                    <option value="👼">蓋章：淨漢 Angel👼</option>
                 </select>
                 <button id="lock-btn" class="btn btn-rose" onclick="toggleLock()">🔒 鎖定賓果盤</button>
                 <button id="shuffle-btn" class="btn btn-serenity" onclick="shuffleGrid()">🎲 隨機排亂</button>
-                <button class="btn btn-serenity btn-full" onclick="downloadWallpaper()">📸 下載 9:16 桌布</button>
+                <button class="btn btn-serenity btn-full" onclick="downloadWallpaper()">📸 下載應援桌布 (9:16)</button>
             </div>
         </div>
     </div>
 
     <script>
-        const playersConfig = { players: ["金妮", "然然", "雅雯"] };
-        let gameData = JSON.parse(localStorage.getItem('svt_vstable_v4')) || {};
+        const players = ["金妮", "然然", "雅雯"];
+        let gameData = JSON.parse(localStorage.getItem('svt_v4_data')) || {};
         let currentPlayer = "";
         const targetDate = new Date("2026-07-31T23:59:59").getTime();
 
@@ -239,7 +254,7 @@
             updateTimer();
             setInterval(updateTimer, 1000);
             
-            playersConfig.players.forEach((name, i) => {
+            players.forEach((name, i) => {
                 if(gameData[name] && gameData[name].avatar) {
                     const img = document.getElementById(`h-img-${i}`);
                     if(img) img.src = gameData[name].avatar;
@@ -250,13 +265,14 @@
         function renderPlayers() {
             const list = document.getElementById('player-list');
             list.innerHTML = "";
-            playersConfig.players.forEach((name, i) => {
+            players.forEach((name, i) => {
                 const card = document.createElement('div');
                 card.className = "player-card";
                 const avatarSrc = (gameData[name] && gameData[name].avatar) ? gameData[name].avatar : "";
                 card.innerHTML = `
-                    <div class="p-avatar">
-                        💎<img src="${avatarSrc}" alt="" style="display:${avatarSrc?'block':'none'}">
+                    <div class="avatar-box">
+                        <span class="avatar-placeholder">💎</span>
+                        <img src="${avatarSrc}" alt="" style="display:${avatarSrc?'block':'none'}">
                     </div>
                     <span class="player-name">${name}</span>
                 `;
@@ -268,8 +284,9 @@
         function openBingo(name) {
             currentPlayer = name;
             if (!gameData[name]) {
+                // 初始化中央格內容為 FREE-C (仿參考圖1)
                 gameData[name] = { grid: Array(9).fill({text: "", marked: false}), bias: "🍊", locked: false, avatar: "" };
-                gameData[name].grid[4] = {text: "自由格", marked: true};
+                gameData[name].grid[4] = {text: "CARAT DIAMOND", marked: true};
             }
             document.getElementById('page-home').classList.remove('active');
             document.getElementById('page-bingo').classList.add('active');
@@ -278,6 +295,7 @@
             if(gameData[name].avatar) {
                 img.src = gameData[name].avatar; img.style.display = 'block';
             } else { img.style.display = 'none'; }
+            document.getElementById('bias-select').value = gameData[name].bias;
             renderGrid(); window.scrollTo(0,0);
         }
 
@@ -285,26 +303,17 @@
             const grid = document.getElementById('bingo-grid');
             grid.innerHTML = "";
             const data = gameData[currentPlayer];
-            document.getElementById('lock-btn').innerText = data.locked ? "🔓 解鎖編輯" : "🔒 鎖定並蓋章";
+            document.getElementById('lock-btn').innerText = data.locked ? "🔓 解鎖編輯" : "🔒 鎖定內容";
             document.getElementById('shuffle-btn').style.display = data.locked ? "none" : "block";
 
             data.grid.forEach((item, i) => {
                 const cell = document.createElement('div');
                 cell.className = `cell ${item.marked ? 'marked' : ''}`;
                 
-                // 為每個格子添加稍微不同的大小/角度感
-                const radiusVariations = [
-                    "25% 30% 20% 35% / 30% 25% 35% 20%",
-                    "30% 25% 35% 20% / 25% 30% 20% 35%",
-                    "20% 35% 25% 30% / 35% 20% 35% 25%",
-                    "35% 20% 35% 25% / 20% 35% 25% 30%"
-                ];
-                cell.style.borderRadius = radiusVariations[i % 4];
-
                 if (!data.locked) {
                     const area = document.createElement('textarea');
                     area.value = item.text;
-                    area.placeholder = i === 4 ? "自由格" : "輸入目標";
+                    area.placeholder = i === 4 ? "自由格" : "挑戰項目";
                     area.oninput = (e) => { data.grid[i].text = e.target.value; save(); };
                     cell.appendChild(area);
                 } else {
@@ -313,7 +322,7 @@
                         const s = document.createElement('div');
                         s.className = "stamp"; s.innerText = data.bias; cell.appendChild(s);
                     }
-                    cell.onclick = () => toggleMark(i);
+                    cell.ondblclick = () => toggleMark(i);
                 }
                 grid.appendChild(cell);
             });
@@ -327,7 +336,8 @@
                 reader.onload = (e) => {
                     const base64 = e.target.result;
                     gameData[currentPlayer].avatar = base64;
-                    document.getElementById('current-avatar-img').src = base64; save(); renderPlayers();
+                    document.getElementById('current-avatar-img').src = base64;
+                    save(); renderPlayers();
                 }; reader.readAsDataURL(file);
             }
         }
@@ -337,7 +347,9 @@
         function toggleMark(i) {
             if (!gameData[currentPlayer].locked) return;
             gameData[currentPlayer].grid[i].marked = !gameData[currentPlayer].grid[i].marked;
-            if (gameData[currentPlayer].grid[i].marked) confetti({ particleCount: 80, spread: 50, colors: ['#F7CAC9', '#92A8D1'], origin: { y: 0.8 } });
+            if (gameData[currentPlayer].grid[i].marked) {
+                confetti({ particleCount: 80, spread: 50, colors: ['#F7CAC9', '#92A8D1'], origin: { y: 0.8 } });
+            }
             save(); renderGrid();
         }
 
@@ -349,7 +361,7 @@
         }
 
         function updateBias() { gameData[currentPlayer].bias = document.getElementById('bias-select').value; save(); renderGrid(); }
-        function save() { localStorage.setItem('svt_vstable_v4', JSON.stringify(gameData)); }
+        function save() { localStorage.setItem('svt_v4_data', JSON.stringify(gameData)); }
 
         function updateTimer() {
             const now = new Date().getTime(); const diff = targetDate - now;
@@ -362,9 +374,9 @@
 
         async function downloadWallpaper() {
             const element = document.getElementById('bingo-capture-zone');
-            const canvas = await html2canvas(element, { scale: 3, backgroundColor: null });
+            const canvas = await html2canvas(element, { scale: 3, backgroundColor: '#FFFFFF' });
             const link = document.createElement('a');
-            link.download = `BINGO_CHALLENGE_${currentPlayer}.png`; link.href = canvas.toDataURL(); link.click();
+            link.download = `SVT_BINGO_CHALLENGE_${currentPlayer}.png`; link.href = canvas.toDataURL(); link.click();
         }
 
         init();
