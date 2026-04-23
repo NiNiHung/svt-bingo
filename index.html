@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SVT BINGO 2026</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@500;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --rose: #F7CAC9;
+            --serenity: #92A8D1;
+            --bg-light: #FFF5F5;
+            --dark: #2D2D2D;
+            --card-bg: #FFFFFF;
+            --glass: rgba(255, 255, 255, 0.3);
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body {
+            margin: 0; padding: 0; background-color: var(--bg-light);
+            font-family: 'Noto Sans TC', sans-serif; color: var(--dark);
+            display: flex; flex-direction: column; align-items: center;
+        }
+
+        .page { display: none; width: 100%; max-width: 1000px; animation: fadeIn 0.4s ease; }
+        .page.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .container { width: 95%; margin: 20px auto; display: flex; flex-direction: column; gap: 20px; }
+        
+        /* --- Hero Section --- */
+        .hero-section {
+            display: grid; grid-template-columns: 1fr 1.2fr;
+            background: var(--card-bg); border-radius: 40px; overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.03);
+        }
+        .hero-left { 
+            background: linear-gradient(135deg, var(--rose), var(--serenity)); 
+            display: flex; align-items: center; justify-content: center; padding: 40px;
+        }
+        .hero-right { padding: 40px; display: flex; flex-direction: column; justify-content: center; }
+        .tag { background: var(--rose); color: white; padding: 4px 15px; border-radius: 20px; font-weight: 900; width: fit-content; margin-bottom: 10px; }
+        .hero-right h1 { font-size: 2.2rem; margin: 0; font-weight: 900; line-height: 1.2; }
+        .hero-right h1 span { color: var(--serenity); }
+        .hero-right p { color: #666; margin: 15px 0 0; font-weight: 500; font-size: 0.95rem; }
+        
+        /* --- Timer Section --- */
+        .countdown-section { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; }
+        .deadline-card { background: var(--card-bg); border-radius: 30px; padding: 25px; border-left: 10px solid var(--rose); }
+        .deadline-card h3 { margin: 0; font-size: 0.8rem; color: #999; letter-spacing: 2px; }
+        .deadline-card div { font-size: 1.6rem; font-weight: 900; margin-top: 5px; }
+        .timer-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+        .timer-box { background: var(--card-bg); border-radius: 20px; padding: 15px; text-align: center; border: 2px solid var(--serenity); }
+        .timer-num { font-size: 1.5rem; font-weight: 900; display: block; }
+        .timer-label { font-size: 0.7rem; color: #999; font-weight: 700; }
+
+        /* --- Player List --- */
+        .player-title { font-size: 1.5rem; font-weight: 900; margin: 20px 0 10px; }
+        .player-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
+        .player-card { background: var(--card-bg); border-radius: 25px; padding: 25px; text-align: center; cursor: pointer; transition: 0.3s; border: 1px solid transparent; }
+        .player-card:hover { transform: translateY(-5px); border-color: var(--rose); box-shadow: 0 15px 30px rgba(0,0,0,0.05); }
+        .avatar-circle { width: 60px; height: 60px; background: #f8f8f8; border-radius: 50%; margin: 0 auto 10px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; border: 3px solid var(--bg-light); }
+        .player-name { font-weight: 900; font-size: 1.1rem; }
+
+        /* --- Bingo Board --- */
+        #bingo-capture-zone { 
+            background: linear-gradient(135deg, var(--rose), var(--serenity)); 
+            border-radius: 40px; padding: 40px 25px; position: relative; overflow: hidden;
+        }
+        .bingo-board { 
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; 
+            width: 100%; aspect-ratio: 1/1; margin-top: 25px;
+        }
+        .cell {
+            background: var(--glass); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+            border-radius: 20px; border: 1px solid rgba(255,255,255,0.4);
+            display: flex; align-items: center; justify-content: center; padding: 10px;
+            position: relative;
+        }
+        .cell.marked { background: rgba(255,255,255,0.5); border: 3px solid white; }
+        .cell textarea {
+            width: 100%; height: 100%; background: transparent; border: none;
+            text-align: center; font-weight: 700; font-size: 1.1rem; resize: none; color: white; font-family: inherit;
+        }
+        .cell-text { color: white; font-weight: 900; text-align: center; font-size: 1.1rem; line-height: 1.3; }
+        .stamp { position: absolute; font-size: 3.5rem; opacity: 0.7; pointer-events: none; }
+
+        .controls { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 30px 0; }
+        .btn { padding: 12px 25px; border-radius: 50px; border: none; font-weight: 900; cursor: pointer; transition: 0.3s; font-family: inherit; }
+        .btn-rose { background: var(--rose); color: white; box-shadow: 0 5px 15px rgba(247, 202, 201, 0.4); }
+        .btn-serenity { background: var(--serenity); color: white; box-shadow: 0 5px 15px rgba(146, 168, 209, 0.4); }
+        .btn-white { background: white; color: var(--dark); }
+
+        .floating-status { 
+            position: fixed; bottom: 20px; right: 20px; background: white; padding: 15px 20px; 
+            border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); z-index: 100;
+            font-size: 0.85rem; border: 2px solid var(--rose); font-weight: 700;
+        }
+
+        @media (max-width: 768px) {
+            .hero-section, .countdown-section { grid-template-columns: 1fr; }
+            .player-grid { grid-template-columns: repeat(2, 1fr); }
+            #bingo-capture-zone { border-radius: 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="floating-status">
+        💎 見到 WOOZI：<span id="woozi-d">--</span> 天<br>
+        💎 見到 HOSHI：<span id="hoshi-d">--</span> 天
+    </div>
+
+    <div id="page-home" class="page active">
+        <div class="container">
+            <div class="hero-section">
+                <div class="hero-left">
+                    <div style="display:flex;">
+                        <div class="avatar-circle" style="width:100px; height:100px; background:white;">🍚</div>
+                        <div class="avatar-circle" style="width:100px; height:100px; background:white; margin-left:-20px;">🐯</div>
+                        <div class="avatar-circle" style="width:100px; height:100px; background:white; margin-left:-20px;">🍊</div>
+                    </div>
+                </div>
+                <div class="hero-right">
+                    <div class="tag">2026 目標爭奪戰</div>
+                    <h1>9 宮格<span>賓果！</span><br>克拉自救會集合</h1>
+                    <p>達成目標、連成一線。2026/07/31 結算，誰才是最後的大贏家？</p>
+                </div>
+            </div>
+
+            <div class="countdown-section">
+                <div class="deadline-card">
+                    <h3>DEADLINE</h3>
+                    <div>2026 / 07 / 31</div>
+                </div>
+                <div class="timer-grid">
+                    <div class="timer-box"><span class="timer-num" id="d">--</span><span class="timer-label">DAYS</span></div>
+                    <div class="timer-box"><span class="timer-num" id="h">--</span><span class="timer-label">HOURS</span></div>
+                    <div class="timer-box"><span class="timer-num" id="m">--</span><span class="timer-label">MINS</span></div>
+                    <div class="timer-box"><span class="timer-num" id="s">--</span><span class="timer-label">SECS</span></div>
+                </div>
+            </div>
+
+            <div class="player-title">PICK YOUR <span>PLAYER</span></div>
+            <div class="player-grid" id="player-list"></div>
+        </div>
+    </div>
+
+    <div id="page-bingo" class="page">
+        <div class="container">
+            <button class="btn btn-white" onclick="showHome()">← 返回名單</button>
+            
+            <div id="bingo-capture-zone">
+                <div style="text-align:center; color:white;">
+                    <div class="avatar-circle" style="background:white;">💎</div>
+                    <h2 id="current-player-name" style="margin:5px 0; font-weight:900; font-size: 1.8rem;">PLAYER</h2>
+                    <p style="font-weight:700; opacity:0.9; letter-spacing: 2px;">SVT BINGO CHALLENGE</p>
+                </div>
+
+                <div class="bingo-board" id="bingo-grid"></div>
+            </div>
+
+            <div class="controls">
+                <select id="bias-select" class="btn btn-white" onchange="updateBias()">
+                    <option value="🍊">本命：勝寛 🍊</option>
+                    <option value="🐯">本命：Hoshi 🐯</option>
+                    <option value="🍚">本命：Woozi 🍚</option>
+                    <option value="👼">本命：淨漢 👼</option>
+                </select>
+                <button id="lock-btn" class="btn btn-rose" onclick="toggleLock()">🔒 鎖定內容</button>
+                <button id="shuffle-btn" class="btn btn-serenity" onclick="shuffleGrid()">🎲 隨機排列</button>
+                <button class="btn btn-serenity" onclick="downloadWallpaper()">📸 下載桌布</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* ==========================================
+           在此修改玩家名單 (逗號隔開)
+           ========================================== */
+        const config = {
+            players: ["金妮", "然然", "雅雯", "晴方", "郁淳"]
+        };
+
+        let gameData = JSON.parse(localStorage.getItem('svt_game_data')) || {};
+        let currentPlayer = "";
+        const targetDate = new Date("2026-07-31T23:59:59").getTime();
+
+        function init() {
+            renderPlayers();
+            updateTimer();
+            setInterval(updateTimer, 1000);
+            updateEnlistDays();
+        }
+
+        function renderPlayers() {
+            const list = document.getElementById('player-list');
+            list.innerHTML = "";
+            config.players.forEach(name => {
+                const card = document.createElement('div');
+                card.className = "player-card";
+                card.innerHTML = `<div class="avatar-circle">💎</div><span class="player-name">${name}</span>`;
+                card.onclick = () => openBingo(name);
+                list.appendChild(card);
+            });
+        }
+
+        function openBingo(name) {
+            currentPlayer = name;
+            if (!gameData[name]) {
+                gameData[name] = {
+                    grid: Array(9).fill({text: "", marked: false}),
+                    bias: "🍊",
+                    locked: false
+                };
+            }
+            document.getElementById('page-home').classList.remove('active');
+            document.getElementById('page-bingo').classList.add('active');
+            document.getElementById('current-player-name').innerText = name;
+            document.getElementById('bias-select').value = gameData[name].bias;
+            renderGrid();
+            window.scrollTo(0,0);
+        }
+
+        function showHome() {
+            document.getElementById('page-bingo').classList.remove('active');
+            document.getElementById('page-home').classList.add('active');
+        }
+
+        function renderGrid() {
+            const grid = document.getElementById('bingo-grid');
+            grid.innerHTML = "";
+            const data = gameData[currentPlayer];
+
+            document.getElementById('lock-btn').innerText = data.locked ? "🔓 解鎖編輯" : "🔒 鎖定並蓋章";
+            document.getElementById('shuffle-btn').style.display = data.locked ? "none" : "block";
+
+            data.grid.forEach((item, i) => {
+                const cell = document.createElement('div');
+                cell.className = `cell ${item.marked ? 'marked' : ''}`;
+                
+                if (i === 4) {
+                    cell.innerHTML = "<span class='cell-text'>💎<br>FREE</span>";
+                } else if (!data.locked) {
+                    const area = document.createElement('textarea');
+                    area.value = item.text;
+                    area.oninput = (e) => { data.grid[i].text = e.target.value; save(); };
+                    cell.appendChild(area);
+                } else {
+                    cell.innerHTML = `<div class="cell-text">${item.text}</div>`;
+                    if (item.marked) {
+                        const s = document.createElement('div');
+                        s.className = "stamp";
+                        s.innerText = data.bias;
+                        cell.appendChild(s);
+                    }
+                    cell.onclick = () => toggleMark(i);
+                }
+                grid.appendChild(cell);
+            });
+        }
+
+        function toggleLock() {
+            gameData[currentPlayer].locked = !gameData[currentPlayer].locked;
+            save(); renderGrid();
+        }
+
+        function toggleMark(i) {
+            if (!gameData[currentPlayer].locked) return;
+            gameData[currentPlayer].grid[i].marked = !gameData[currentPlayer].grid[i].marked;
+            if (gameData[currentPlayer].grid[i].marked) {
+                confetti({ particleCount: 100, spread: 70, colors: ['#F7CAC9', '#92A8D1'], origin: { y: 0.8 } });
+            }
+            save(); renderGrid();
+        }
+
+        function shuffleGrid() {
+            let mid = gameData[currentPlayer].grid[4];
+            let rest = gameData[currentPlayer].grid.filter((_, i) => i !== 4);
+            rest.sort(() => Math.random() - 0.5);
+            rest.splice(4, 0, mid);
+            gameData[currentPlayer].grid = rest;
+            save(); renderGrid();
+        }
+
+        function updateBias() {
+            gameData[currentPlayer].bias = document.getElementById('bias-select').value;
+            save(); renderGrid();
+        }
+
+        function save() { localStorage.setItem('svt_game_data', JSON.stringify(gameData)); }
+
+        function updateTimer() {
+            const now = new Date().getTime();
+            const diff = targetDate - now;
+            if (diff < 0) return;
+            document.getElementById('d').innerText = Math.floor(diff / (1000 * 60 * 60 * 24)).toString().padStart(2, '0');
+            document.getElementById('h').innerText = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)).toString().padStart(2, '0');
+            document.getElementById('m').innerText = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)).toString().padStart(2, '0');
+            document.getElementById('s').innerText = Math.floor((diff % (1000 * 60)) / 1000).toString().padStart(2, '0');
+        }
+
+        function updateEnlistDays() {
+            const now = new Date();
+            const end = new Date("2027-03-01");
+            const diff = Math.max(0, Math.floor((end - now) / (1000 * 60 * 60 * 24)));
+            document.getElementById('woozi-d').innerText = diff;
+            document.getElementById('hoshi-d').innerText = diff;
+        }
+
+        async function downloadWallpaper() {
+            const element = document.getElementById('bingo-capture-zone');
+            const canvas = await html2canvas(element, { scale: 3, backgroundColor: null });
+            const link = document.createElement('a');
+            link.download = `BINGO_${currentPlayer}.png`;
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+
+        init();
+    </script>
+</body>
+</html>
