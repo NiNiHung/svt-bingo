@@ -361,7 +361,7 @@
             document.getElementById('current-avatar-box').innerHTML = gameData[name].avatar ? `<img src="${gameData[name].avatar}">` : "💎";
             
             // --- 💡 從這裡開始覆蓋：背景與浮水印邏輯 ---
-            const captureZone = document.getElementById('bingo-capture-zone');
+           const captureZone = document.getElementById('bingo-capture-zone');
             const wmOverlay = document.getElementById('watermark-overlay');
             wmOverlay.innerHTML = ""; 
 
@@ -390,6 +390,11 @@
                 }
                 wmOverlay.appendChild(imgMid);
             }
+            // --- 💡 放到這裡結束 ---
+
+            updateBiasUI();
+            renderGrid();
+        }
             // --- 💡 覆蓋到這裡結束 ---
 
             updateBiasUI();
