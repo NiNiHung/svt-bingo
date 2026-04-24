@@ -119,9 +119,21 @@
             align-items: center;
             justify-content: center;
         }
+        .explosion-box { 
+            background: white; 
+            color: var(--rose); 
+            font-weight: 900; 
+            font-size: 2.8rem; /* 放大字體 */
+            padding: 20px 40px; 
+            border: 8px solid var(--rose); 
+            box-shadow: 0 0 50px rgba(0,0,0,0.3); /* 增加光暈 */
+            white-space: nowrap; 
+            letter-spacing: 2px;
+        }
         #say-the-name.active { transform: translate(-50%, -50%) scale(1) rotate(-10deg); }
         .explosion-box { background: white; color: var(--rose); font-weight: 900; font-size: 1.8rem; padding: 15px 30px; border: 6px solid var(--rose); box-shadow: 0 10px 30px rgba(0,0,0,0.2); white-space: nowrap; }
     </style>
+    
 </head>
 <body>
 
@@ -184,7 +196,20 @@
                 
                 <div class="bingo-board" id="bingo-grid"></div>
             </div>
-
+<div id="bingo-stats-board" style="display: flex; gap: 20px; justify-content: center; margin: 10px 0 20px; z-index: 5; position: relative;">
+    <div style="text-align: center;">
+        <div style="font-size: 0.65rem; font-weight: 900; opacity: 0.8; letter-spacing: 1px; margin-bottom: 4px;">COMPLETED</div>
+        <div style="background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); padding: 5px 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.3); font-size: 1.3rem; font-weight: 900; min-width: 80px;">
+            <span id="stat-cells">0</span><small style="font-size: 0.7rem; opacity: 0.6;"> / 9</small>
+        </div>
+    </div>
+    <div style="text-align: center;">
+        <div style="font-size: 0.65rem; font-weight: 900; opacity: 0.8; letter-spacing: 1px; margin-bottom: 4px;">BINGO LINES</div>
+        <div style="background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); padding: 5px 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.3); font-size: 1.3rem; font-weight: 900; min-width: 80px; color: #fff;">
+            <span id="stat-lines">0</span>
+        </div>
+    </div>
+</div>
             <div class="controls">
                 <div style="grid-column: span 2; text-align: center;">
                     <div class="bias-toggle-btn" onclick="nextBias()"><img id="bias-btn-img" src=""></div>
@@ -315,7 +340,20 @@
                 setTimeout(() => niceBox.classList.remove('active'), 2500);
                 window.isNewBingo = false; // 重置標記
             }
-            // 插入結束
+            // 插入結束function toggleMark(idx) {
+    const data = gameData[currentPlayer];
+    const oldBingos = calculateBingos(data.grid);
+    data.grid[idx].marked = !data.grid[idx].marked;
+    const newBingos = calculateBingos(data.grid);
+    
+    // 如果連線數增加了，就設為 True 讓 renderGrid 觸發特效
+    if (newBingos > oldBingos) {
+        window.isBingoTriggered = true;
+    }
+    
+    save(); 
+    renderGrid();
+}
         }
 
         function openBingo(name) {
@@ -407,7 +445,29 @@
                     };
                 }
                 gridContainer.appendChild(cell);
-            });
+            });// 偵測數據並更新 UI
+            const markedCount = data.grid.filter(item => item.marked).length;
+            const lineCount = calculateBingos(data.grid);
+            
+            document.getElementById('stat-cells').innerText = markedCount;
+            document.getElementById('stat-lines').innerText = lineCount;
+
+            // 觸發連線成功特效
+            if (window.isBingoTriggered) {
+                confetti({
+                    particleCount: 150,
+                    spread: 70,
+                    origin: { y: 0.6 },
+                    colors: ['#F7CAC9', '#92A8D1', '#FFFFFF']
+                });
+                
+                const niceBox = document.getElementById('say-the-name');
+                niceBox.querySelector('.explosion-box').innerText = "Very NICE!!!!!";
+                niceBox.classList.add('active');
+                
+                setTimeout(() => niceBox.classList.remove('active'), 2500);
+                window.isBingoTriggered = false; // 重置狀態
+            }
         }
 
         function toggleMark(idx) {
