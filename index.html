@@ -38,12 +38,12 @@
         .avatar-box { width: 60px; height: 60px; background: #eee; border-radius: 50%; margin: 0 auto 10px; overflow: hidden; border: 2px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: center; position: relative; }
         .avatar-box img { width: 100% !important; height: 100% !important; object-fit: cover !important; border-radius: 50%; }
 
-        /* --- Rules Card (補回) --- */
+        /* --- Rules Card --- */
         .rules-card { background: white; padding: 20px; border-radius: 20px; border-left: 5px solid var(--rose); margin-top: 5px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); }
         .rules-card h2 { margin: 0 0 10px; font-size: 1rem; font-weight: 900; color: var(--dark); }
         .rules-card ol { font-size: 0.75rem; line-height: 1.6; padding-left: 20px; margin: 0; color: #666; font-weight: 500; }
 
-        /* --- Bingo Capture Zone --- */
+        /* --- Bingo Area --- */
         #bingo-capture-zone { background: linear-gradient(135deg, var(--rose), var(--serenity)); border-radius: 30px; padding: 50px 25px; text-align: center; color: white; position: relative; overflow: hidden; }
         
         #watermark-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; }
@@ -55,7 +55,6 @@
 
         .bingo-board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; width: 100%; aspect-ratio: 1/1; margin-top: 15px; position: relative; z-index: 1; }
         
-        /* 核心置中修正 */
         .cell { 
             background: var(--glass); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); 
             border-radius: 18px; border: 1px solid rgba(255,255,255,0.4); 
@@ -64,12 +63,13 @@
         }
         .cell.marked { background: rgba(255,255,255,0.6); border: 3px solid white; }
         
+        /* 採用舊版核心置中與縮放設定 */
         .cell textarea, .cell-text { 
             width: 100%; height: 100%;
             background: transparent; border: none; 
             font-weight: 900; color: white; outline: none; resize: none; 
             text-align: center;
-            display: flex; align-items: center; justify-content: center; /* Flex 垂直置中 */
+            display: flex; align-items: center; justify-content: center; 
             padding: 10px;
             font-family: 'Noto Sans TC', sans-serif; 
             font-size: 1.1rem; 
@@ -77,12 +77,13 @@
             z-index: 3;
             overflow: hidden;
             word-break: break-all;
+            align-content: center;
         }
 
         .stamp-img { position: absolute; width: 35.3%; height: 35.3%; bottom: 5px; right: 5px; object-fit: contain; pointer-events: none; z-index: 5; transform: rotate(-5deg); }
 
         .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 20px 0; }
-        .btn { padding: 14px; border-radius: 50px; border: none; font-weight: 900; cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; justify-content: center; }
+        .btn { padding: 14px; border-radius: 50px; border: none; font-weight: 900; cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; justify-content: center; text-decoration: none; }
         .btn-rose { background: var(--rose); color: white !important; }
         .btn-serenity { background: var(--serenity); color: white !important; }
         .btn-white { background: white; border: 1px solid #eee; color: var(--dark) !important; }
@@ -122,7 +123,7 @@
             <div class="rules-card">
                 <h2>💎 遊戲規則</h2>
                 <ol>
-                   <li>選擇玩家進入個人頁，點擊預設頭貼可自行上傳圖片。</li>
+                    <li>選擇玩家進入個人頁，點擊預設頭貼可自行上傳圖片。</li>
                     <li>填寫完成後按下「隨機並鎖定」位置即固定，無法編輯。</li>
                     <li>每完成一格目標，點擊格子即蓋章，連線成功有驚喜。</li>
                     <li>長按每一格可記錄個人心情紀錄或執行目標進度。</li>
@@ -189,7 +190,10 @@
         function openBingo(name) {
             currentPlayer = name;
             if (!gameData[name]) {
-                gameData[name] = { grid: Array(9).fill().map((_, i) => ({ text: i === 4 ? "自由格" : "", marked: i === 4 })), biasIdx: 0, locked: false, avatar: "" };
+                gameData[name] = {
+                    grid: Array(9).fill().map((_, i) => ({ text: i === 4 ? "自由格" : "", marked: i === 4 })),
+                    biasIdx: 0, locked: false, avatar: ""
+                };
             }
             document.getElementById('page-home').classList.remove('active');
             document.getElementById('page-bingo').classList.add('active');
@@ -200,21 +204,35 @@
             const wmOverlay = document.getElementById('watermark-overlay');
             wmOverlay.innerHTML = "";
 
-            let wmImg = (name === "然然") ? "./蝴蝶結.png" : "./蝴蝶.png";
-            captureZone.style.background = (name === "雅雯" || name === "金妮") ? "linear-gradient(135deg, #273445, #296985, #93A6AE)" : "linear-gradient(135deg, var(--rose), var(--serenity))";
+            let wmImg = "";
+            let isRan = (name === "然然");
 
-            const imgTop = document.createElement('img');
-            imgTop.src = wmImg; imgTop.className = (name === "然然") ? "wm-style-top wm-ran-top" : "wm-style-top";
-            wmOverlay.appendChild(imgTop);
+            if (name === "雅雯" || name === "金妮") {
+                captureZone.style.background = "linear-gradient(135deg, #273445, #296985, #93A6AE)";
+                wmImg = "./蝴蝶.png";
+            } else if (isRan) {
+                captureZone.style.background = "linear-gradient(135deg, var(--rose), var(--serenity))";
+                wmImg = "./蝴蝶結.png";
+            }
 
-            const imgMid = document.createElement('img');
-            imgMid.src = wmImg; imgMid.className = (name === "然然") ? "wm-style-mid wm-ran-mid" : "wm-style-mid";
-            if (name !== "然然") imgMid.classList.add('wm-mirror');
-            wmOverlay.appendChild(imgMid);
+            if (wmImg) {
+                const imgTop = document.createElement('img');
+                imgTop.src = wmImg; 
+                imgTop.className = isRan ? "wm-style-top wm-ran-top" : "wm-style-top";
+                wmOverlay.appendChild(imgTop);
+
+                const imgMid = document.createElement('img');
+                imgMid.src = wmImg; 
+                imgMid.className = isRan ? "wm-style-mid wm-ran-mid" : "wm-style-mid";
+                if (name === "雅雯" || name === "金妮") imgMid.classList.add('wm-mirror');
+                wmOverlay.appendChild(imgMid);
+            }
             
-            updateBiasUI(); renderGrid();
+            updateBiasUI();
+            renderGrid();
         }
 
+        // 核心：整合自動縮放與渲染邏輯
         function renderGrid() {
             const gridContainer = document.getElementById('bingo-grid');
             gridContainer.innerHTML = "";
@@ -230,9 +248,13 @@
                     const area = document.createElement('textarea');
                     area.value = item.text;
                     area.placeholder = i === 4 ? "自由格" : "輸入目標";
-                    area.oninput = (e) => { data.grid[i].text = e.target.value; autoSizeText(e.target); };
+                    area.oninput = (e) => { 
+                        data.grid[i].text = e.target.value; 
+                        autoSizeText(e.target); 
+                    };
                     cell.appendChild(area);
-                    setTimeout(() => autoSizeText(area), 50);
+                    // 初始渲染後微調大小
+                    setTimeout(() => autoSizeText(area), 10);
                 } else {
                     const txt = document.createElement('div');
                     txt.className = "cell-text";
@@ -241,7 +263,8 @@
                     autoSizeText(txt);
                     if (item.marked) {
                         const s = document.createElement('img');
-                        s.className = "stamp-img"; s.src = localIcons[data.biasIdx];
+                        s.className = "stamp-img";
+                        s.src = localIcons[data.biasIdx];
                         cell.appendChild(s);
                     }
                     cell.onclick = () => toggleMark(i);
@@ -250,16 +273,26 @@
             });
         }
 
+        // 舊版核心自動縮放函數
         function autoSizeText(el) {
-            if(!el) return;
-            let fontSize = 1.1; el.style.fontSize = fontSize + "rem";
-            while ((el.scrollHeight > el.offsetHeight) && fontSize > 0.4) {
-                fontSize -= 0.05; el.style.fontSize = fontSize + "rem";
+            let fontSize = 1.1; 
+            el.style.fontSize = fontSize + "rem";
+            while ((el.scrollHeight > el.offsetHeight || el.scrollWidth > el.offsetWidth) && fontSize > 0.4) {
+                fontSize -= 0.05; 
+                el.style.fontSize = fontSize + "rem";
             }
         }
 
-        function toggleMark(idx) { gameData[currentPlayer].grid[idx].marked = !gameData[currentPlayer].grid[idx].marked; save(); renderGrid(); }
-        function nextBias() { gameData[currentPlayer].biasIdx = (gameData[currentPlayer].biasIdx + 1) % localIcons.length; updateBiasUI(); save(); renderGrid(); }
+        function toggleMark(idx) {
+            gameData[currentPlayer].grid[idx].marked = !gameData[currentPlayer].grid[idx].marked;
+            save(); renderGrid();
+        }
+
+        function nextBias() {
+            gameData[currentPlayer].biasIdx = (gameData[currentPlayer].biasIdx + 1) % localIcons.length;
+            updateBiasUI(); save(); renderGrid();
+        }
+
         function updateBiasUI() { document.getElementById('bias-btn-img').src = localIcons[gameData[currentPlayer].biasIdx]; }
         function manualSave() { save(); alert("已儲存！"); }
         function save() { localStorage.setItem('svt_v23_data', JSON.stringify(gameData)); }
@@ -268,7 +301,8 @@
             if (confirm("鎖定後文字位置將隨機排列，確定執行？")) {
                 let data = gameData[currentPlayer];
                 let mid = data.grid[4];
-                let rest = data.grid.filter((_, i) => i !== 4).sort(() => Math.random() - 0.5);
+                let rest = data.grid.filter((_, i) => i !== 4);
+                rest.sort(() => Math.random() - 0.5);
                 rest.splice(4, 0, mid);
                 data.grid = rest; data.locked = true;
                 save(); renderGrid();
@@ -302,18 +336,9 @@
 
         async function downloadImage() {
             const element = document.getElementById('bingo-capture-zone');
-            const canvas = await html2canvas(element, { 
-                scale: 3, useCORS: true, backgroundColor: null,
-                onclone: (clonedDoc) => {
-                    clonedDoc.querySelectorAll('img').forEach(img => {
-                        img.style.objectFit = 'cover';
-                        img.style.width = '100%'; img.style.height = '100%';
-                        if (img.parentElement.classList.contains('avatar-box')) img.style.borderRadius = '50%';
-                    });
-                }
-            });
+            const canvas = await html2canvas(element, { scale: 3, useCORS: true, backgroundColor: null });
             const link = document.createElement('a');
-            link.download = `SVT_BINGO_${currentPlayer}.png`;
+            link.download = `BINGO_2026_${currentPlayer}.png`;
             link.href = canvas.toDataURL("image/png");
             link.click();
         }
