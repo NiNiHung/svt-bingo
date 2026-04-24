@@ -343,63 +343,65 @@
             list.appendChild(card);
         });
     }
+async function openBingo(name) {
+        currentPlayer = name;
 
-   async function openBingo(name) { // 記得加 async 喔！
-            await loadFromCloud(); // 這是我們剛剛加的強力同步
-            
-            currentPlayer = name;
-            if (!gameData[name]) {
-                gameData[name] = {
-                    grid: Array(9).fill().map((_, i) => ({ text: i === 4 ? "自由格" : "", marked: i === 4, note: "" })),
-                    biasIdx: 0, locked: false, avatar: ""
-                };
-            }
+        // 1. 先顯示頁面，讓使用者感覺不到卡頓
+        document.getElementById('page-home').classList.remove('active');
+        document.getElementById('page-bingo').classList.add('active');
 
-            document.getElementById('page-home').classList.remove('active');
-            document.getElementById('page-bingo').classList.add('active');
-            document.getElementById('current-player-name').innerText = name;
-            document.getElementById('current-avatar-box').innerHTML = gameData[name].avatar ? `<img src="${gameData[name].avatar}">` : "💎";
-            
-            // --- 💡 從這裡開始覆蓋：背景與浮水印邏輯 ---
-           const captureZone = document.getElementById('bingo-capture-zone');
-            const wmOverlay = document.getElementById('watermark-overlay');
-            wmOverlay.innerHTML = ""; 
+        // 2. 顯示基本文字（避免還沒抓到資料前是空白）
+        document.getElementById('current-player-name').innerText = name;
+        
+        // 3. 強力同步資料
+        await loadFromCloud(); 
 
-            let wmImg = "";
-            let isRan = (name === "然然");
+        // 4. 同步完後，確保該玩家有資料物件
+        if (!gameData[name]) {
+            gameData[name] = {
+                grid: Array(9).fill().map((_, i) => ({ text: i === 4 ? "自由格" : "", marked: i === 4, note: "" })),
+                biasIdx: 0, locked: false, avatar: ""
+            };
+        }
 
+        // 5. 更新頭貼
+        document.getElementById('current-avatar-box').innerHTML = gameData[name].avatar ? `<img src="${gameData[name].avatar}">` : "💎";
+        
+        // 6. 設定背景與浮水印
+        const captureZone = document.getElementById('bingo-capture-zone');
+        const wmOverlay = document.getElementById('watermark-overlay');
+        wmOverlay.innerHTML = ""; 
+
+        let wmImg = "";
+        let isRan = (name === "然然");
+
+        if (name === "雅雯" || name === "金妮") {
+            captureZone.style.background = "linear-gradient(135deg, #273445, #296985, #93A6AE)";
+            wmImg = "./蝴蝶.png";
+        } else if (isRan) {
+            captureZone.style.background = "linear-gradient(135deg, var(--rose), var(--serenity))";
+            wmImg = "./蝴蝶結.png";
+        }
+
+        if (wmImg) {
+            const imgTop = document.createElement('img');
+            imgTop.src = wmImg; 
+            imgTop.className = isRan ? "wm-style-top wm-ran-top" : "wm-style-top";
+            wmOverlay.appendChild(imgTop);
+
+            const imgMid = document.createElement('img');
+            imgMid.src = wmImg; 
+            imgMid.className = isRan ? "wm-style-mid wm-ran-mid" : "wm-style-mid";
             if (name === "雅雯" || name === "金妮") {
-                captureZone.style.background = "linear-gradient(135deg, #273445, #296985, #93A6AE)";
-                wmImg = "./蝴蝶.png";
-            } else if (isRan) {
-                captureZone.style.background = "linear-gradient(135deg, var(--rose), var(--serenity))";
-                wmImg = "./蝴蝶結.png";
+                imgMid.classList.add('wm-mirror'); 
             }
-
-            if (wmImg) {
-                const imgTop = document.createElement('img');
-                imgTop.src = wmImg; 
-                imgTop.className = isRan ? "wm-style-top wm-ran-top" : "wm-style-top";
-                wmOverlay.appendChild(imgTop);
-
-                const imgMid = document.createElement('img');
-                imgMid.src = wmImg; 
-                imgMid.className = isRan ? "wm-style-mid wm-ran-mid" : "wm-style-mid";
-                if (name === "雅雯" || name === "金妮") {
-                    imgMid.classList.add('wm-mirror'); 
-                }
-                wmOverlay.appendChild(imgMid);
-            }
-            // --- 💡 放到這裡結束 ---
-
-            updateBiasUI();
-            renderGrid();
+            wmOverlay.appendChild(imgMid);
         }
-            // --- 💡 覆蓋到這裡結束 ---
 
-            updateBiasUI();
-            renderGrid();
-        }
+        // 7. 最後執行 UI 渲染
+        updateBiasUI();
+        renderGrid();
+    }
  function renderGrid() {
         const gridContainer = document.getElementById('bingo-grid');
         if (!gridContainer) return;
