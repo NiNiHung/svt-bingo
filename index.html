@@ -40,10 +40,16 @@
         .avatar-box img { width: 100% !important; height: 100% !important; object-fit: cover !important; border-radius: 50%; }
 
         /* --- Bingo Area --- */
-        #bingo-capture-zone { background: linear-gradient(135deg, var(--rose), var(--serenity)); border-radius: 30px; padding: 45px 25px; text-align: center; color: white; position: relative; overflow: hidden; transition: background 0.5s ease; }
+        #bingo-capture-zone { 
+            background: linear-gradient(135deg, var(--rose), var(--serenity)); 
+            border-radius: 30px; padding: 45px 25px; 
+            text-align: center; color: white; 
+            position: relative; overflow: hidden; 
+            transition: background 0.5s ease;
+            display: flex; flex-direction: column; align-items: center;
+        }
         .player-subtitle { font-size: 0.55rem; font-weight: 700; letter-spacing: 1.5px; opacity: 0.8; margin-top: 4px; margin-bottom: 12px; z-index: 3; position: relative; }
         
-        /* 浮水印位置與樣式 */
         #watermark-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; }
         .wm-style-top { position: absolute; top: 25px; left: 15px; width: 38%; opacity: 0.3; mix-blend-mode: screen; }
         .wm-style-mid { position: absolute; top: 58%; left: 50%; transform: translate(-50%, -50%); width: 21%; opacity: 0.3; mix-blend-mode: screen; }
@@ -98,7 +104,18 @@
         .rules-card h2 { margin: 0 0 10px; font-size: 1rem; font-weight: 900; color: var(--dark); }
         .rules-card ol { font-size: 0.75rem; line-height: 1.6; padding-left: 20px; margin: 0; color: #666; font-weight: 500; }
         
-        #say-the-name { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0); z-index: 100; pointer-events: none; transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        /* 置中關鍵修正：使用 absolute 定位配合 calc 計算 Bingo 網格中心 */
+        #say-the-name { 
+            position: absolute; 
+            top: 50%; left: 50%; 
+            transform: translate(-50%, -50%) scale(0); 
+            z-index: 100; 
+            pointer-events: none; 
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
         #say-the-name.active { transform: translate(-50%, -50%) scale(1) rotate(-10deg); }
         .explosion-box { background: white; color: var(--rose); font-weight: 900; font-size: 1.8rem; padding: 15px 30px; border: 6px solid var(--rose); box-shadow: 0 10px 30px rgba(0,0,0,0.2); white-space: nowrap; }
     </style>
@@ -149,6 +166,7 @@
             <button class="btn btn-white" onclick="showHome()">← Back</button>
             <div id="bingo-capture-zone">
                 <div id="say-the-name"><div class="explosion-box">아주 NICE!!!</div></div>
+                
                 <div id="watermark-overlay"></div>
                 
                 <div class="avatar-box" style="width:90px; height:90px; font-size:40px; z-index:5;" id="current-avatar-box" onclick="triggerUpload()">💎</div>
@@ -227,15 +245,13 @@
             document.getElementById('current-player-name').innerText = name;
             document.getElementById('current-avatar-box').innerHTML = gameData[name].avatar ? `<img src="${gameData[name].avatar}">` : "💎";
             
-            // --- 核心：動態背景與浮水印生成 ---
             const captureZone = document.getElementById('bingo-capture-zone');
             const wmOverlay = document.getElementById('watermark-overlay');
-            wmOverlay.innerHTML = ""; // 清空舊的
+            wmOverlay.innerHTML = ""; 
 
             let wmImg = "";
             let isRan = (name === "然然");
 
-            // 1. 根據玩家決定背景
             if (name === "雅雯" || name === "金妮") {
                 captureZone.style.background = "linear-gradient(135deg, #273445, #296985, #93A6AE)";
                 wmImg = "./蝴蝶.png";
@@ -244,7 +260,6 @@
                 wmImg = "./蝴蝶結.png";
             }
 
-            // 2. 根據路徑產生浮水印 DOM
             if (wmImg) {
                 const imgTop = document.createElement('img');
                 imgTop.src = wmImg; 
@@ -255,7 +270,7 @@
                 imgMid.src = wmImg; 
                 imgMid.className = isRan ? "wm-style-mid wm-ran-mid" : "wm-style-mid";
                 if (name === "雅雯" || name === "金妮") {
-                    imgMid.classList.add('wm-mirror'); // 金妮雅雯版中層需要鏡射
+                    imgMid.classList.add('wm-mirror'); 
                 }
                 wmOverlay.appendChild(imgMid);
             }
