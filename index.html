@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>CARAT BINGO 2026</title>
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@500;700;900&display=swap" rel="stylesheet">
     <style>
@@ -17,14 +16,9 @@
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .container { width: 92%; margin: 15px auto; display: flex; flex-direction: column; gap: 15px; }
 
-        /* --- Hero Section --- */
+        /* --- Hero --- */
         .hero-section { display: grid; grid-template-columns: 1fr 1.2fr; background: var(--card-bg); border-radius: 30px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.03); }
-        @media (max-width: 768px) {
-            .hero-section { grid-template-columns: 1fr; }
-            .hero-right { text-align: center; align-items: center; }
-            .hero-right h1 { font-size: 1.3rem; }
-            .cell textarea, .cell-text { font-size: 0.85rem !important; padding: 8px !important; }
-        }
+        @media (max-width: 768px) { .hero-section { grid-template-columns: 1fr; } .hero-right { text-align: center; align-items: center; } }
         .hero-left { background: linear-gradient(135deg, var(--rose), var(--serenity)); display: flex; align-items: center; justify-content: center; padding: 25px; }
         .hero-right { padding: 25px; display: flex; flex-direction: column; justify-content: center; }
         .tag { background: var(--rose); color: white; padding: 3px 12px; border-radius: 20px; font-weight: 900; width: fit-content; margin-bottom: 8px; font-size: 0.75rem; }
@@ -38,54 +32,57 @@
         .timer-num { font-size: 1.2rem; font-weight: 900; display: block; }
         .timer-label { font-size: 0.6rem; color: #999; font-weight: 700; }
 
-        /* --- Player --- */
+        /* --- Player Card --- */
         .player-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 10px 0; }
         .player-card { background: var(--card-bg); border-radius: 20px; padding: 15px 10px; text-align: center; cursor: pointer; }
-        .avatar-box { width: 60px; height: 60px; background: #fff; border-radius: 50%; margin: 0 auto 10px; overflow: hidden; border: 2px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: center; font-size: 24px; position: relative; }
-        .avatar-box img { width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; border-radius: 50%; }
+        .avatar-box { width: 60px; height: 60px; background: #eee; border-radius: 50%; margin: 0 auto 10px; overflow: hidden; border: 2px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: center; position: relative; }
+        .avatar-box img { width: 100% !important; height: 100% !important; object-fit: cover !important; border-radius: 50%; }
 
-        /* --- Rules --- */
-        .rules-card { background: white; padding: 20px; border-radius: 20px; border-left: 5px solid var(--rose); margin-top: 5px; }
+        /* --- Rules Card (補回) --- */
+        .rules-card { background: white; padding: 20px; border-radius: 20px; border-left: 5px solid var(--rose); margin-top: 5px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); }
         .rules-card h2 { margin: 0 0 10px; font-size: 1rem; font-weight: 900; color: var(--dark); }
         .rules-card ol { font-size: 0.75rem; line-height: 1.6; padding-left: 20px; margin: 0; color: #666; font-weight: 500; }
 
-        /* --- Bingo Area --- */
+        /* --- Bingo Capture Zone --- */
         #bingo-capture-zone { background: linear-gradient(135deg, var(--rose), var(--serenity)); border-radius: 30px; padding: 50px 25px; text-align: center; color: white; position: relative; overflow: hidden; }
         
         #watermark-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; }
-
-        .bingo-board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; width: 100%; aspect-ratio: 1/1; margin-top: 15px; position: relative; z-index: 1; }
-        .cell { background: var(--glass); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border-radius: 18px; border: 1px solid rgba(255,255,255,0.4); display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; cursor: pointer; }
-        .cell.marked { background: rgba(255,255,255,0.6); border: 3px solid white; }
-        
-        /* 修正文字垂直置中 */
-        .cell textarea, .cell-text { width: 100%; height: 100%; background: transparent; border: none; display: flex; align-items: center; justify-content: center; text-align: center; font-weight: 900; color: white; outline: none; resize: none; overflow: hidden; word-break: break-all; line-height: 1.2; padding: 10px; font-family: 'Noto Sans TC', sans-serif; font-size: 1.1rem; z-index: 3; margin: 0; box-sizing: border-box; }
-        
-        .stamp-img { position: absolute; width: 35.3%; height: 35.3%; bottom: 5px; right: 5px; object-fit: contain; pointer-events: none; z-index: 5; transform: rotate(-5deg); }
-
-        /* 浮水印：透明度0.3, 不模糊, Screen模式 */
-        .wm-style-top {
-            position: absolute;
-            top: 25px; left: 15px; width: 38%;
-            opacity: 0.3; mix-blend-mode: screen;
-            object-fit: contain;
-        }
-        .wm-style-mid {
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            width: 21%;
-            opacity: 0.3; mix-blend-mode: screen;
-            object-fit: contain;
-        }
-        /* 然然專用微調：蝴蝶結精準置中 */
+        .wm-style-top { position: absolute; top: 25px; left: 15px; width: 38%; opacity: 0.3; mix-blend-mode: screen; }
+        .wm-style-mid { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 21%; opacity: 0.3; mix-blend-mode: screen; }
         .wm-ran-top { width: 30% !important; }
-        .wm-ran-mid { width: 17% !important; top: 62% !important; left: 50% !important; transform: translate(-50%, -50%) !important; }
-
+        .wm-ran-mid { width: 18% !important; top: 62.5% !important; }
         .wm-mirror { transform: translate(-50%, -50%) scaleX(-1) !important; }
 
+        .bingo-board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; width: 100%; aspect-ratio: 1/1; margin-top: 15px; position: relative; z-index: 1; }
+        
+        /* 核心置中修正 */
+        .cell { 
+            background: var(--glass); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); 
+            border-radius: 18px; border: 1px solid rgba(255,255,255,0.4); 
+            position: relative; overflow: hidden; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; 
+        }
+        .cell.marked { background: rgba(255,255,255,0.6); border: 3px solid white; }
+        
+        .cell textarea, .cell-text { 
+            width: 100%; height: 100%;
+            background: transparent; border: none; 
+            font-weight: 900; color: white; outline: none; resize: none; 
+            text-align: center;
+            display: flex; align-items: center; justify-content: center; /* Flex 垂直置中 */
+            padding: 10px;
+            font-family: 'Noto Sans TC', sans-serif; 
+            font-size: 1.1rem; 
+            line-height: 1.2;
+            z-index: 3;
+            overflow: hidden;
+            word-break: break-all;
+        }
+
+        .stamp-img { position: absolute; width: 35.3%; height: 35.3%; bottom: 5px; right: 5px; object-fit: contain; pointer-events: none; z-index: 5; transform: rotate(-5deg); }
+
         .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 20px 0; }
-        .btn { padding: 14px; border-radius: 50px; border: none; font-weight: 900; cursor: pointer; font-size: 0.9rem; text-decoration: none; display: flex; align-items: center; justify-content: center; }
+        .btn { padding: 14px; border-radius: 50px; border: none; font-weight: 900; cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; justify-content: center; }
         .btn-rose { background: var(--rose); color: white !important; }
         .btn-serenity { background: var(--serenity); color: white !important; }
         .btn-white { background: white; border: 1px solid #eee; color: var(--dark) !important; }
@@ -109,7 +106,7 @@
                 <div class="hero-right">
                     <div class="tag">2026 BEST WISHES</div>
                     <h1>CARATs 賓果！<span>豪雨鴨鴨軍眷團GOING</span></h1>
-                    <div class="hero-desc">幸福不是成就順 我們最愛夫碩順<br>우린 여러분의 부석순!파이팅 해야지!!</div>
+                    <div class="hero-desc">幸福不是成就順 我們最愛夫碩順<br>우린 여러분의 부석순!Fighting 해야지!!</div>
                 </div>
             </div>
 
@@ -125,7 +122,7 @@
             <div class="rules-card">
                 <h2>💎 遊戲規則</h2>
                 <ol>
-                    <li>選擇玩家進入個人頁，點擊預設頭貼可自行上傳圖片。</li>
+                   <li>選擇玩家進入個人頁，點擊預設頭貼可自行上傳圖片。</li>
                     <li>填寫完成後按下「隨機並鎖定」位置即固定，無法編輯。</li>
                     <li>每完成一格目標，點擊格子即蓋章，連線成功有驚喜。</li>
                     <li>長按每一格可記錄個人心情紀錄或執行目標進度。</li>
@@ -141,8 +138,8 @@
             <button class="btn btn-white" onclick="showHome()">← Back</button>
             <div id="bingo-capture-zone">
                 <div id="watermark-overlay"></div>
-                <div class="avatar-box" style="width:110px; height:110px; font-size:40px; position:relative; z-index:3;" onclick="triggerUpload()" id="current-avatar-box">💎</div>
-                <h2 id="current-player-name" style="margin:10px 0 2px; font-weight:900; font-size:1.4rem; position:relative; z-index:3;">PLAYER</h2>
+                <div class="avatar-box" style="width:110px; height:110px; font-size:40px; margin:0 auto; z-index:3;" onclick="triggerUpload()" id="current-avatar-box">💎</div>
+                <h2 id="current-player-name" style="margin:12px 0 10px; font-weight:900; font-size:1.4rem; position:relative; z-index:3;">PLAYER</h2>
                 <div class="bingo-board" id="bingo-grid"></div>
             </div>
 
@@ -163,20 +160,16 @@
     <script>
         const localIcons = ["./順榮.png", "./知勳.png", "./dk.png", "./勝寬.png", "./淨漢.png"];
         const players = ["金妮", "然然", "雅雯"];
-        let gameData = JSON.parse(localStorage.getItem('svt_v19_data')) || {}; 
+        let gameData = JSON.parse(localStorage.getItem('svt_v23_data')) || {}; 
         let currentPlayer = "";
         const targetDate = new Date("2026-07-31T23:59:59").getTime();
 
-        function init() { 
-            renderPlayers(); 
-            setInterval(updateTimer, 1000); 
-            updateHeroAvatars(); 
-        }
+        function init() { renderPlayers(); setInterval(updateTimer, 1000); updateHeroAvatars(); }
 
         function updateHeroAvatars() {
             players.forEach((name, i) => {
                 const box = document.getElementById(`h-box-${i}`);
-                if(box) box.innerHTML = (gameData[name] && gameData[name].avatar) ? `<img src="${gameData[name].avatar}">` : "💎";
+                if(box) box.innerHTML = (gameData[name]?.avatar) ? `<img src="${gameData[name].avatar}">` : "💎";
             });
         }
 
@@ -186,7 +179,7 @@
             players.forEach((name) => {
                 const card = document.createElement('div');
                 card.className = "player-card";
-                const avatarHTML = (gameData[name] && gameData[name].avatar) ? `<img src="${gameData[name].avatar}">` : "💎";
+                const avatarHTML = (gameData[name]?.avatar) ? `<img src="${gameData[name].avatar}">` : "💎";
                 card.innerHTML = `<div class="avatar-box">${avatarHTML}</div><span style="font-weight:900">${name}</span>`;
                 card.onclick = () => openBingo(name);
                 list.appendChild(card);
@@ -196,10 +189,7 @@
         function openBingo(name) {
             currentPlayer = name;
             if (!gameData[name]) {
-                gameData[name] = {
-                    grid: Array(9).fill().map((_, i) => ({ text: i === 4 ? "自由格" : "", marked: i === 4 })),
-                    biasIdx: 0, locked: false, avatar: ""
-                };
+                gameData[name] = { grid: Array(9).fill().map((_, i) => ({ text: i === 4 ? "自由格" : "", marked: i === 4 })), biasIdx: 0, locked: false, avatar: "" };
             }
             document.getElementById('page-home').classList.remove('active');
             document.getElementById('page-bingo').classList.add('active');
@@ -210,32 +200,19 @@
             const wmOverlay = document.getElementById('watermark-overlay');
             wmOverlay.innerHTML = "";
 
-            let wmImg = "";
-            let isRan = (name === "然然");
+            let wmImg = (name === "然然") ? "./蝴蝶結.png" : "./蝴蝶.png";
+            captureZone.style.background = (name === "雅雯" || name === "金妮") ? "linear-gradient(135deg, #273445, #296985, #93A6AE)" : "linear-gradient(135deg, var(--rose), var(--serenity))";
 
-            if (name === "雅雯" || name === "金妮") {
-                captureZone.style.background = "linear-gradient(135deg, #273445, #296985, #93A6AE)";
-                wmImg = "./蝴蝶.png";
-            } else if (isRan) {
-                captureZone.style.background = "linear-gradient(135deg, var(--rose), var(--serenity))";
-                wmImg = "./蝴蝶結.png";
-            }
+            const imgTop = document.createElement('img');
+            imgTop.src = wmImg; imgTop.className = (name === "然然") ? "wm-style-top wm-ran-top" : "wm-style-top";
+            wmOverlay.appendChild(imgTop);
 
-            if (wmImg) {
-                const imgTop = document.createElement('img');
-                imgTop.src = wmImg; 
-                imgTop.className = isRan ? "wm-style-top wm-ran-top" : "wm-style-top";
-                wmOverlay.appendChild(imgTop);
-
-                const imgMid = document.createElement('img');
-                imgMid.src = wmImg; 
-                imgMid.className = isRan ? "wm-style-mid wm-ran-mid" : "wm-style-mid";
-                if (name === "雅雯" || name === "金妮") imgMid.classList.add('wm-mirror');
-                wmOverlay.appendChild(imgMid);
-            }
+            const imgMid = document.createElement('img');
+            imgMid.src = wmImg; imgMid.className = (name === "然然") ? "wm-style-mid wm-ran-mid" : "wm-style-mid";
+            if (name !== "然然") imgMid.classList.add('wm-mirror');
+            wmOverlay.appendChild(imgMid);
             
-            updateBiasUI();
-            renderGrid();
+            updateBiasUI(); renderGrid();
         }
 
         function renderGrid() {
@@ -255,7 +232,7 @@
                     area.placeholder = i === 4 ? "自由格" : "輸入目標";
                     area.oninput = (e) => { data.grid[i].text = e.target.value; autoSizeText(e.target); };
                     cell.appendChild(area);
-                    setTimeout(() => autoSizeText(area), 10);
+                    setTimeout(() => autoSizeText(area), 50);
                 } else {
                     const txt = document.createElement('div');
                     txt.className = "cell-text";
@@ -264,8 +241,7 @@
                     autoSizeText(txt);
                     if (item.marked) {
                         const s = document.createElement('img');
-                        s.className = "stamp-img";
-                        s.src = localIcons[data.biasIdx];
+                        s.className = "stamp-img"; s.src = localIcons[data.biasIdx];
                         cell.appendChild(s);
                     }
                     cell.onclick = () => toggleMark(i);
@@ -277,31 +253,22 @@
         function autoSizeText(el) {
             if(!el) return;
             let fontSize = 1.1; el.style.fontSize = fontSize + "rem";
-            while ((el.scrollHeight > el.offsetHeight || el.scrollWidth > el.offsetWidth) && fontSize > 0.4) {
+            while ((el.scrollHeight > el.offsetHeight) && fontSize > 0.4) {
                 fontSize -= 0.05; el.style.fontSize = fontSize + "rem";
             }
         }
 
-        function toggleMark(idx) {
-            gameData[currentPlayer].grid[idx].marked = !gameData[currentPlayer].grid[idx].marked;
-            save(); renderGrid();
-        }
-
-        function nextBias() {
-            gameData[currentPlayer].biasIdx = (gameData[currentPlayer].biasIdx + 1) % localIcons.length;
-            updateBiasUI(); save(); renderGrid();
-        }
-
+        function toggleMark(idx) { gameData[currentPlayer].grid[idx].marked = !gameData[currentPlayer].grid[idx].marked; save(); renderGrid(); }
+        function nextBias() { gameData[currentPlayer].biasIdx = (gameData[currentPlayer].biasIdx + 1) % localIcons.length; updateBiasUI(); save(); renderGrid(); }
         function updateBiasUI() { document.getElementById('bias-btn-img').src = localIcons[gameData[currentPlayer].biasIdx]; }
         function manualSave() { save(); alert("已儲存！"); }
-        function save() { localStorage.setItem('svt_v19_data', JSON.stringify(gameData)); }
+        function save() { localStorage.setItem('svt_v23_data', JSON.stringify(gameData)); }
         
         function shuffleAndLock() {
             if (confirm("鎖定後文字位置將隨機排列，確定執行？")) {
                 let data = gameData[currentPlayer];
                 let mid = data.grid[4];
-                let rest = data.grid.filter((_, i) => i !== 4);
-                rest.sort(() => Math.random() - 0.5);
+                let rest = data.grid.filter((_, i) => i !== 4).sort(() => Math.random() - 0.5);
                 rest.splice(4, 0, mid);
                 data.grid = rest; data.locked = true;
                 save(); renderGrid();
@@ -335,35 +302,16 @@
 
         async function downloadImage() {
             const element = document.getElementById('bingo-capture-zone');
-            
-            // 存圖前預處理：確保所有格子文字重新計算大小
-            element.querySelectorAll('.cell-text').forEach(t => autoSizeText(t));
-
             const canvas = await html2canvas(element, { 
-                scale: 3, 
-                useCORS: true, 
-                allowTaint: true,
+                scale: 3, useCORS: true, backgroundColor: null,
                 onclone: (clonedDoc) => {
-                    // 強制複製出的 DOM 裡面的圖片樣式正確
-                    const imgs = clonedDoc.querySelectorAll('img');
-                    imgs.forEach(img => {
+                    clonedDoc.querySelectorAll('img').forEach(img => {
                         img.style.objectFit = 'cover';
-                        if (img.parentElement.classList.contains('avatar-box')) {
-                            img.style.borderRadius = '50%';
-                        }
-                    });
-                    // 強制文字在存圖時也要置中
-                    const texts = clonedDoc.querySelectorAll('.cell-text');
-                    texts.forEach(t => {
-                        t.style.display = "flex";
-                        t.style.justifyContent = "center";
-                        t.style.alignItems = "center";
-                        t.style.height = "100%";
-                        t.style.padding = "10px";
+                        img.style.width = '100%'; img.style.height = '100%';
+                        if (img.parentElement.classList.contains('avatar-box')) img.style.borderRadius = '50%';
                     });
                 }
             });
-            
             const link = document.createElement('a');
             link.download = `SVT_BINGO_${currentPlayer}.png`;
             link.href = canvas.toDataURL("image/png");
