@@ -558,15 +558,36 @@
     }
 
     function updateTimer() {
-        const diff = targetDate - new Date().getTime();
-        const d = document.getElementById('d');
-        if (!d || diff < 0) return;
-        document.getElementById('d').innerText = Math.floor(diff / (1000 * 60 * 60 * 24)).toString().padStart(2, '0');
-        document.getElementById('h').innerText = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)).toString().padStart(2, '0');
-        document.getElementById('m').innerText = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)).toString().padStart(2, '0');
-        document.getElementById('s').innerText = Math.floor((diff % (1000 * 60)) / 1000).toString().padStart(2, '0');
-    }
+    // 這裡的日期請確保是妳要的 D-Day
+    const targetDate = new Date("2026-07-31T23:59:59").getTime();
+    const now = new Date().getTime();
+    const diff = targetDate - now;
 
+    // 抓取 HTML 元素
+    const dEl = document.getElementById('d');
+    const hEl = document.getElementById('h');
+    const mEl = document.getElementById('m');
+    const sEl = document.getElementById('s');
+
+    // 如果找不到元素就跳出，避免程式報錯導致玩家列表跑不出來
+    if (!dEl || diff < 0) return;
+
+    // 計算數值並填入
+    dEl.innerText = Math.floor(diff / (1000 * 60 * 60 * 24)).toString().padStart(2, '0');
+    hEl.innerText = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)).toString().padStart(2, '0');
+    mEl.innerText = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)).toString().padStart(2, '0');
+    sEl.innerText = Math.floor((diff % (1000 * 60)) / 1000).toString().padStart(2, '0');
+}
+
+// 確保 init 裡面有啟動它
+async function init() {
+    updateTimer(); // 先跑第一次
+    setInterval(updateTimer, 1000); // 每秒跑一次
+    
+    // ... 後面原本的 loadFromCloud() 和 renderPlayers() 保持不動 ...
+    if (typeof loadFromCloud === 'function') await loadFromCloud();
+    if (typeof renderPlayers === 'function') renderPlayers();
+}
     init();
 </script>
 </body>
