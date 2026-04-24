@@ -52,27 +52,22 @@
         /* --- Bingo Area --- */
         #bingo-capture-zone { background: linear-gradient(135deg, var(--rose), var(--serenity)); border-radius: 30px; padding: 50px 25px; text-align: center; color: white; position: relative; overflow: hidden; }
         
-        #watermark-overlay {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none;
-            z-index: 2;
-            mix-blend-mode: screen; 
-        }
+        #watermark-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; }
 
         .bingo-board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; width: 100%; aspect-ratio: 1/1; margin-top: 15px; position: relative; z-index: 1; }
         .cell { background: var(--glass); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border-radius: 18px; border: 1px solid rgba(255,255,255,0.4); display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; cursor: pointer; }
         .cell.marked { background: rgba(255,255,255,0.6); border: 3px solid white; }
         
-        .cell textarea, .cell-text { width: 100%; height: 100%; background: transparent; border: none; display: flex; align-items: center; justify-content: center; text-align: center; font-weight: 900; color: white; outline: none; resize: none; overflow: hidden; word-break: break-all; line-height: 1.2; padding: 10px; font-family: 'Noto Sans TC', sans-serif; align-content: center; font-size: 1.1rem; z-index: 3; }
+        /* 修正文字垂直置中 */
+        .cell textarea, .cell-text { width: 100%; height: 100%; background: transparent; border: none; display: flex; align-items: center; justify-content: center; text-align: center; font-weight: 900; color: white; outline: none; resize: none; overflow: hidden; word-break: break-all; line-height: 1.2; padding: 10px; font-family: 'Noto Sans TC', sans-serif; font-size: 1.1rem; z-index: 3; margin: 0; box-sizing: border-box; }
         
         .stamp-img { position: absolute; width: 35.3%; height: 35.3%; bottom: 5px; right: 5px; object-fit: contain; pointer-events: none; z-index: 5; transform: rotate(-5deg); }
 
-        /* 浮水印優化 */
+        /* 浮水印：透明度0.3, 不模糊, Screen模式 */
         .wm-style-top {
             position: absolute;
             top: 25px; left: 15px; width: 38%;
-            opacity: 0.2; filter: blur(2px);
+            opacity: 0.3; mix-blend-mode: screen;
             object-fit: contain;
         }
         .wm-style-mid {
@@ -80,12 +75,12 @@
             top: 50%; left: 50%;
             transform: translate(-50%, -50%);
             width: 21%;
-            opacity: 0.2; filter: blur(2px);
+            opacity: 0.3; mix-blend-mode: screen;
             object-fit: contain;
         }
-        /* 然然專用微調：縮小20% (原寬度 38% -> 30%, 21% -> 17%) 並移動中間圖案 */
+        /* 然然專用微調：蝴蝶結精準置中 */
         .wm-ran-top { width: 30% !important; }
-        .wm-ran-mid { width: 17% !important; top: 58% !important; } /* 下移半格距離 */
+        .wm-ran-mid { width: 17% !important; top: 62% !important; left: 50% !important; transform: translate(-50%, -50%) !important; }
 
         .wm-mirror { transform: translate(-50%, -50%) scaleX(-1) !important; }
 
@@ -97,17 +92,6 @@
         
         .bias-toggle-btn { width: 65px; height: 65px; border-radius: 50%; border: 3px solid white; background: white; cursor: pointer; overflow: hidden; margin: 10px auto; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         .bias-toggle-btn img { width: 90%; height: 90%; object-fit: contain; }
-
-        /* 強制 9:16 桌布模式 - 修正手機端頭貼變形 */
-        .force-916 { 
-            aspect-ratio: 9/16 !important; 
-            height: 1000px !important; /* 給予固定高度基線 */
-            width: 562.5px !important; 
-            padding: 100px 40px !important; 
-            display: flex !important; 
-            flex-direction: column !important; 
-            justify-content: center !important; 
-        }
     </style>
 </head>
 <body>
@@ -142,10 +126,11 @@
                 <h2>💎 遊戲規則</h2>
                 <ol>
                     <li>選擇玩家進入個人頁，點擊預設頭貼可自行上傳圖片。</li>
-                    <li>填寫完成後按下「隨機並鎖定」位置即固定，無法再編輯。</li>
+                    <li>填寫完成後按下「隨機並鎖定」位置即固定，無法編輯。</li>
                     <li>每完成一格目標，點擊格子即蓋章，連線成功有驚喜。</li>
                     <li>長按每一格可記錄個人心情紀錄或執行目標進度。</li>
                     <li>點擊 Miniteen 圖示可切換不同成員印章。</li>
+                    <li>按下「Download my BINGO」可保存圖片。</li>
                 </ol>
             </div>
         </div>
@@ -168,7 +153,7 @@
                 </div>
                 <button id="lock-btn" class="btn btn-rose" onclick="shuffleAndLock()">🎲 隨機並鎖定</button>
                 <button id="save-btn" class="btn btn-white" onclick="manualSave()">💾 儲存</button>
-                <button class="btn btn-serenity" style="grid-column: span 2;" onclick="downloadWallpaper()">📸 Download wallpaper</button>
+                <button class="btn btn-serenity" style="grid-column: span 2;" onclick="downloadImage()">📸 Download my BINGO</button>
             </div>
         </div>
     </div>
@@ -178,7 +163,7 @@
     <script>
         const localIcons = ["./順榮.png", "./知勳.png", "./dk.png", "./勝寬.png", "./淨漢.png"];
         const players = ["金妮", "然然", "雅雯"];
-        let gameData = JSON.parse(localStorage.getItem('svt_v18_data')) || {}; 
+        let gameData = JSON.parse(localStorage.getItem('svt_v19_data')) || {}; 
         let currentPlayer = "";
         const targetDate = new Date("2026-07-31T23:59:59").getTime();
 
@@ -290,6 +275,7 @@
         }
 
         function autoSizeText(el) {
+            if(!el) return;
             let fontSize = 1.1; el.style.fontSize = fontSize + "rem";
             while ((el.scrollHeight > el.offsetHeight || el.scrollWidth > el.offsetWidth) && fontSize > 0.4) {
                 fontSize -= 0.05; el.style.fontSize = fontSize + "rem";
@@ -308,7 +294,7 @@
 
         function updateBiasUI() { document.getElementById('bias-btn-img').src = localIcons[gameData[currentPlayer].biasIdx]; }
         function manualSave() { save(); alert("已儲存！"); }
-        function save() { localStorage.setItem('svt_v18_data', JSON.stringify(gameData)); }
+        function save() { localStorage.setItem('svt_v19_data', JSON.stringify(gameData)); }
         
         function shuffleAndLock() {
             if (confirm("鎖定後文字位置將隨機排列，確定執行？")) {
@@ -347,22 +333,18 @@
             document.getElementById('s').innerText = Math.floor((diff % (1000 * 60)) / 1000).toString().padStart(2, '0');
         }
 
-        async function downloadWallpaper() {
+        async function downloadImage() {
             const element = document.getElementById('bingo-capture-zone');
-            element.classList.add('force-916');
             
-            // 修正手機截圖變形關鍵設定
+            // 存圖前預處理：確保所有格子文字重新計算大小
+            element.querySelectorAll('.cell-text').forEach(t => autoSizeText(t));
+
             const canvas = await html2canvas(element, { 
                 scale: 3, 
                 useCORS: true, 
                 allowTaint: true,
-                backgroundColor: null,
                 onclone: (clonedDoc) => {
-                    const clonedElt = clonedDoc.getElementById('bingo-capture-zone');
-                    clonedElt.style.width = "562.5px";
-                    clonedElt.style.height = "1000px";
-                    
-                    // 強制所有圖片保持 cover
+                    // 強制複製出的 DOM 裡面的圖片樣式正確
                     const imgs = clonedDoc.querySelectorAll('img');
                     imgs.forEach(img => {
                         img.style.objectFit = 'cover';
@@ -370,12 +352,20 @@
                             img.style.borderRadius = '50%';
                         }
                     });
+                    // 強制文字在存圖時也要置中
+                    const texts = clonedDoc.querySelectorAll('.cell-text');
+                    texts.forEach(t => {
+                        t.style.display = "flex";
+                        t.style.justifyContent = "center";
+                        t.style.alignItems = "center";
+                        t.style.height = "100%";
+                        t.style.padding = "10px";
+                    });
                 }
             });
             
-            element.classList.remove('force-916');
             const link = document.createElement('a');
-            link.download = `BINGO_2026_${currentPlayer}.png`;
+            link.download = `SVT_BINGO_${currentPlayer}.png`;
             link.href = canvas.toDataURL("image/png");
             link.click();
         }
