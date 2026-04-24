@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>CARAT BINGO 2026</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@500;700;900&display=swap" rel="stylesheet">
     <style>
@@ -39,10 +40,10 @@
         .avatar-box img { width: 100% !important; height: 100% !important; object-fit: cover !important; border-radius: 50%; }
 
         /* --- Bingo Area --- */
-        #bingo-capture-zone { background: linear-gradient(135deg, var(--rose), var(--serenity)); border-radius: 30px; padding: 45px 25px; text-align: center; color: white; position: relative; overflow: hidden; }
+        #bingo-capture-zone { background: linear-gradient(135deg, var(--rose), var(--serenity)); border-radius: 30px; padding: 45px 25px; text-align: center; color: white; position: relative; overflow: hidden; transition: background 0.5s ease; }
         .player-subtitle { font-size: 0.55rem; font-weight: 700; letter-spacing: 1.5px; opacity: 0.8; margin-top: 4px; margin-bottom: 12px; z-index: 3; position: relative; }
-
-        /* 浮水印位置 */
+        
+        /* 浮水印位置與樣式 */
         #watermark-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; }
         .wm-style-top { position: absolute; top: 25px; left: 15px; width: 38%; opacity: 0.3; mix-blend-mode: screen; }
         .wm-style-mid { position: absolute; top: 58%; left: 50%; transform: translate(-50%, -50%); width: 21%; opacity: 0.3; mix-blend-mode: screen; }
@@ -82,24 +83,24 @@
         .btn { padding: 14px; border-radius: 50px; border: none; font-weight: 900; cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; justify-content: center; text-decoration: none; }
         .btn-rose { background: var(--rose); color: white !important; }
         .btn-serenity { background: var(--serenity); color: white !important; }
-        
-        /* 微調：Back 按鈕小巧化並靠左 */
-        .btn-white { 
-            background: white; border: 1px solid #eee; color: var(--dark) !important; 
-            width: fit-content !important; /* 不撐滿 */
-            padding: 6px 15px !important; /* 縮小包框 */
-            font-size: 0.75rem !important; /* 字體縮小 */
-            margin-bottom: 5px;
-        }
-        
-        .download-btn { display: none !important; }
-        
+        .btn-white { background: white; border: 1px solid #eee; color: var(--dark) !important; width: fit-content !important; padding: 6px 15px !important; font-size: 0.75rem !important; margin-bottom: 5px; }
+
         .bias-toggle-btn { width: 65px; height: 65px; border-radius: 50%; border: 3px solid white; background: white; cursor: pointer; overflow: hidden; margin: 10px auto; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         .bias-toggle-btn img { width: 90%; height: 90%; object-fit: contain; }
+
+        /* --- Diary Modal --- */
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 2000; backdrop-filter: blur(5px); }
+        .modal-content { background: white; padding: 25px; border-radius: 25px; width: 85%; max-width: 400px; text-align: center; border: 4px solid var(--serenity); box-shadow: 0 15px 40px rgba(0,0,0,0.2); }
+        #note-title { margin: 0; font-size: 1.5rem; color: var(--serenity); font-weight: 900; }
+        #note-input { width: 100%; height: 120px; margin: 15px 0; border-radius: 15px; padding: 12px; border: 2px solid #f0f0f0; outline: none; font-family: 'Noto Sans TC', sans-serif; resize: none; text-align: center; font-size: 0.9rem; }
 
         .rules-card { background: white; padding: 20px; border-radius: 20px; border-left: 5px solid var(--rose); margin-top: 5px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); }
         .rules-card h2 { margin: 0 0 10px; font-size: 1rem; font-weight: 900; color: var(--dark); }
         .rules-card ol { font-size: 0.75rem; line-height: 1.6; padding-left: 20px; margin: 0; color: #666; font-weight: 500; }
+        
+        #say-the-name { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0); z-index: 100; pointer-events: none; transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        #say-the-name.active { transform: translate(-50%, -50%) scale(1) rotate(-10deg); }
+        .explosion-box { background: white; color: var(--rose); font-weight: 900; font-size: 1.8rem; padding: 15px 30px; border: 6px solid var(--rose); box-shadow: 0 10px 30px rgba(0,0,0,0.2); white-space: nowrap; }
     </style>
 </head>
 <body>
@@ -131,9 +132,9 @@
             <div class="player-grid" id="player-list"></div>
 
             <div class="rules-card">
-                <h2>💎 遊戲規則</h2>
+                <h2>💎 玩法介紹</h2>
                 <ol>
-                  <li>選擇玩家進入個人頁，點擊預設頭貼可自行上傳圖片。</li>
+                    <li>選擇玩家進入個人頁，點擊預設頭貼可自行上傳圖片。</li>
                     <li>填寫完成後按下「隨機並鎖定」位置即固定，無法編輯。</li>
                     <li>每完成一格目標，點擊格子即蓋章，連線成功有驚喜。</li>
                     <li>長按每一格可記錄個人心情紀錄或執行目標進度。</li>
@@ -147,10 +148,13 @@
         <div class="container">
             <button class="btn btn-white" onclick="showHome()">← Back</button>
             <div id="bingo-capture-zone">
+                <div id="say-the-name"><div class="explosion-box">아주 NICE!!!</div></div>
                 <div id="watermark-overlay"></div>
-                <div class="avatar-box" style="width:100px; height:100px; font-size:40px; margin:0 auto; z-index:3;" onclick="triggerUpload()" id="current-avatar-box">💎</div>
-                <h2 id="current-player-name" style="margin:12px 0 0; font-weight:900; font-size:1.4rem; position:relative; z-index:3;">PLAYER</h2>
-                <div class="player-subtitle">CARAT BINGO CHALLENGE</div>
+                
+                <div class="avatar-box" style="width:90px; height:90px; font-size:40px; z-index:5;" id="current-avatar-box" onclick="triggerUpload()">💎</div>
+                <h2 id="current-player-name" style="margin:5px 0 0; font-weight:900; font-size:1.4rem; z-index:5; position:relative;">PLAYER</h2>
+                <div class="player-subtitle">2026 CARAT BINGO CHALLENGE</div>
+                
                 <div class="bingo-board" id="bingo-grid"></div>
             </div>
 
@@ -160,9 +164,17 @@
                     <span style="font-size: 0.6rem; color: #999; font-weight: 700;">SWITCH STAMP</span>
                 </div>
                 <button id="lock-btn" class="btn btn-rose" onclick="shuffleAndLock()">🎲 隨機並鎖定</button>
-                <button id="save-btn" class="btn btn-white" style="width:100% !important; font-size:0.9rem !important; padding:14px !important;" onclick="manualSave()">💾 儲存</button>
-                <button class="btn btn-serenity download-btn" style="grid-column: span 2;" onclick="downloadImage()">📸 Download my BINGO</button>
+                <button id="save-btn" class="btn btn-serenity" onclick="manualSave()">💾 點我儲存</button>
             </div>
+        </div>
+    </div>
+
+    <div id="note-modal" class="modal">
+        <div class="modal-content">
+            <h3 id="note-title">Diary</h3>
+            <span id="note-subtitle" style="font-size:0.75rem; color:#999; margin-top:5px; display:block;"></span>
+            <textarea id="note-input" placeholder="在這裡記錄你的挑戰心情或進度..."></textarea>
+            <button class="btn btn-serenity" style="width:100%" onclick="closeNote()">儲存紀錄</button>
         </div>
     </div>
 
@@ -171,16 +183,21 @@
     <script>
         const localIcons = ["./順榮.png", "./知勳.png", "./dk.png", "./勝寬.png", "./淨漢.png"];
         const players = ["金妮", "然然", "雅雯"];
-        let gameData = JSON.parse(localStorage.getItem('svt_v23_data')) || {}; 
+        let gameData = JSON.parse(localStorage.getItem('carat_bingo_final')) || {}; 
         let currentPlayer = "";
+        let currentNoteIdx = -1;
         const targetDate = new Date("2026-07-31T23:59:59").getTime();
 
-        function init() { renderPlayers(); setInterval(updateTimer, 1000); updateHeroAvatars(); }
+        function init() { 
+            renderPlayers(); 
+            setInterval(updateTimer, 1000); 
+            updateHeroAvatars(); 
+        }
 
         function updateHeroAvatars() {
             players.forEach((name, i) => {
                 const box = document.getElementById(`h-box-${i}`);
-                if(box) box.innerHTML = (gameData[name]?.avatar) ? `<img src="${gameData[name].avatar}">` : "💎";
+                if(box) box.innerHTML = (gameData[name] && gameData[name].avatar) ? `<img src="${gameData[name].avatar}">` : "💎";
             });
         }
 
@@ -190,7 +207,7 @@
             players.forEach((name) => {
                 const card = document.createElement('div');
                 card.className = "player-card";
-                const avatarHTML = (gameData[name]?.avatar) ? `<img src="${gameData[name].avatar}">` : "💎";
+                const avatarHTML = (gameData[name] && gameData[name].avatar) ? `<img src="${gameData[name].avatar}">` : "💎";
                 card.innerHTML = `<div class="avatar-box">${avatarHTML}</div><span style="font-weight:900">${name}</span>`;
                 card.onclick = () => openBingo(name);
                 list.appendChild(card);
@@ -201,7 +218,7 @@
             currentPlayer = name;
             if (!gameData[name]) {
                 gameData[name] = {
-                    grid: Array(9).fill().map((_, i) => ({ text: i === 4 ? "自由格" : "", marked: i === 4 })),
+                    grid: Array(9).fill().map((_, i) => ({ text: i === 4 ? "自由格" : "", marked: i === 4, note: "" })),
                     biasIdx: 0, locked: false, avatar: ""
                 };
             }
@@ -210,13 +227,15 @@
             document.getElementById('current-player-name').innerText = name;
             document.getElementById('current-avatar-box').innerHTML = gameData[name].avatar ? `<img src="${gameData[name].avatar}">` : "💎";
             
+            // --- 核心：動態背景與浮水印生成 ---
             const captureZone = document.getElementById('bingo-capture-zone');
             const wmOverlay = document.getElementById('watermark-overlay');
-            wmOverlay.innerHTML = "";
+            wmOverlay.innerHTML = ""; // 清空舊的
 
             let wmImg = "";
             let isRan = (name === "然然");
 
+            // 1. 根據玩家決定背景
             if (name === "雅雯" || name === "金妮") {
                 captureZone.style.background = "linear-gradient(135deg, #273445, #296985, #93A6AE)";
                 wmImg = "./蝴蝶.png";
@@ -225,6 +244,7 @@
                 wmImg = "./蝴蝶結.png";
             }
 
+            // 2. 根據路徑產生浮水印 DOM
             if (wmImg) {
                 const imgTop = document.createElement('img');
                 imgTop.src = wmImg; 
@@ -234,10 +254,12 @@
                 const imgMid = document.createElement('img');
                 imgMid.src = wmImg; 
                 imgMid.className = isRan ? "wm-style-mid wm-ran-mid" : "wm-style-mid";
-                if (name === "雅雯" || name === "金妮") imgMid.classList.add('wm-mirror');
+                if (name === "雅雯" || name === "金妮") {
+                    imgMid.classList.add('wm-mirror'); // 金妮雅雯版中層需要鏡射
+                }
                 wmOverlay.appendChild(imgMid);
             }
-            
+
             updateBiasUI();
             renderGrid();
         }
@@ -246,6 +268,7 @@
             const gridContainer = document.getElementById('bingo-grid');
             gridContainer.innerHTML = "";
             const data = gameData[currentPlayer];
+
             document.getElementById('lock-btn').style.display = data.locked ? "none" : "block";
             document.getElementById('save-btn').style.display = data.locked ? "none" : "block";
 
@@ -257,42 +280,80 @@
                     const area = document.createElement('textarea');
                     area.value = item.text;
                     area.placeholder = i === 4 ? "自由格" : "輸入目標";
-                    area.oninput = (e) => { 
-                        data.grid[i].text = e.target.value; 
-                        autoSizeText(e.target); 
-                    };
+                    area.oninput = (e) => { data.grid[i].text = e.target.value; };
                     cell.appendChild(area);
-                    setTimeout(() => autoSizeText(area), 10);
                 } else {
                     const txt = document.createElement('div');
                     txt.className = "cell-text";
                     txt.innerText = item.text;
                     cell.appendChild(txt);
-                    autoSizeText(txt);
+                    
                     if (item.marked) {
                         const s = document.createElement('img');
                         s.className = "stamp-img";
                         s.src = localIcons[data.biasIdx];
                         cell.appendChild(s);
                     }
+
                     cell.onclick = () => toggleMark(i);
+                    
+                    let pressTimer;
+                    cell.onmousedown = cell.ontouchstart = () => {
+                        pressTimer = setTimeout(() => openNote(i), 600);
+                    };
+                    cell.onmouseup = cell.ontouchend = () => {
+                        clearTimeout(pressTimer);
+                    };
                 }
                 gridContainer.appendChild(cell);
             });
         }
 
-        function autoSizeText(el) {
-            let fontSize = 0.75; 
-            el.style.fontSize = fontSize + "rem";
-            while ((el.scrollHeight > el.offsetHeight || el.scrollWidth > el.offsetWidth) && fontSize > 0.4) {
-                fontSize -= 0.05; 
-                el.style.fontSize = fontSize + "rem";
+        function toggleMark(idx) {
+            const data = gameData[currentPlayer];
+            const oldBingos = calculateBingos(data.grid);
+            data.grid[idx].marked = !data.grid[idx].marked;
+            const newBingos = calculateBingos(data.grid);
+            
+            if (newBingos > oldBingos) {
+                const el = document.getElementById('say-the-name');
+                el.classList.add('active');
+                confetti({particleCount: 150, spread: 80, origin: { y: 0.5 }});
+                setTimeout(() => el.classList.remove('active'), 2000);
             }
+            save(); renderGrid();
         }
 
-        function toggleMark(idx) {
-            gameData[currentPlayer].grid[idx].marked = !gameData[currentPlayer].grid[idx].marked;
-            save(); renderGrid();
+        function calculateBingos(grid) {
+            const lines = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+            return lines.filter(l => l.every(idx => grid[idx].marked)).length;
+        }
+
+        function openNote(idx) {
+            currentNoteIdx = idx;
+            const goalText = gameData[currentPlayer].grid[idx].text || "未設定目標";
+            document.getElementById('note-subtitle').innerText = `目標：${goalText}`;
+            document.getElementById('note-input').value = gameData[currentPlayer].grid[idx].note || "";
+            document.getElementById('note-modal').style.display = "flex";
+        }
+
+        function closeNote() {
+            gameData[currentPlayer].grid[currentNoteIdx].note = document.getElementById('note-input').value;
+            document.getElementById('note-modal').style.display = "none";
+            save();
+        }
+
+        function shuffleAndLock() {
+            if (confirm("鎖定後位置將隨機重排且無法編輯目標，確定執行？")) {
+                let data = gameData[currentPlayer];
+                let mid = data.grid[4];
+                let rest = data.grid.filter((_, i) => i !== 4);
+                rest.sort(() => Math.random() - 0.5);
+                rest.splice(4, 0, mid);
+                data.grid = rest;
+                data.locked = true;
+                save(); renderGrid();
+            }
         }
 
         function nextBias() {
@@ -301,19 +362,14 @@
         }
 
         function updateBiasUI() { document.getElementById('bias-btn-img').src = localIcons[gameData[currentPlayer].biasIdx]; }
-        function manualSave() { save(); alert("已儲存！"); }
-        function save() { localStorage.setItem('svt_v23_data', JSON.stringify(gameData)); }
+        function manualSave() { save(); alert("已手動儲存進度！💎"); }
+        function save() { localStorage.setItem('carat_bingo_final', JSON.stringify(gameData)); }
         
-        function shuffleAndLock() {
-            if (confirm("鎖定後文字位置將隨機排列，確定執行？")) {
-                let data = gameData[currentPlayer];
-                let mid = data.grid[4];
-                let rest = data.grid.filter((_, i) => i !== 4);
-                rest.sort(() => Math.random() - 0.5);
-                rest.splice(4, 0, mid);
-                data.grid = rest; data.locked = true;
-                save(); renderGrid();
-            }
+        function showHome() { 
+            document.getElementById('page-bingo').classList.remove('active'); 
+            document.getElementById('page-home').classList.add('active'); 
+            updateHeroAvatars();
+            renderPlayers(); 
         }
 
         function triggerUpload() { document.getElementById('avatar-input').click(); }
@@ -324,13 +380,11 @@
                 reader.onload = (e) => {
                     gameData[currentPlayer].avatar = e.target.result;
                     document.getElementById('current-avatar-box').innerHTML = `<img src="${e.target.result}">`;
-                    save(); updateHeroAvatars();
+                    save();
                 };
                 reader.readAsDataURL(file);
             }
         }
-
-        function showHome() { document.getElementById('page-bingo').classList.remove('active'); document.getElementById('page-home').classList.add('active'); renderPlayers(); }
 
         function updateTimer() {
             const diff = targetDate - new Date().getTime();
@@ -339,15 +393,6 @@
             document.getElementById('h').innerText = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)).toString().padStart(2, '0');
             document.getElementById('m').innerText = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)).toString().padStart(2, '0');
             document.getElementById('s').innerText = Math.floor((diff % (1000 * 60)) / 1000).toString().padStart(2, '0');
-        }
-
-        async function downloadImage() {
-            const element = document.getElementById('bingo-capture-zone');
-            const canvas = await html2canvas(element, { scale: 3, useCORS: true, backgroundColor: null });
-            const link = document.createElement('a');
-            link.download = `BINGO_2026_${currentPlayer}.png`;
-            link.href = canvas.toDataURL("image/png");
-            link.click();
         }
 
         init();
