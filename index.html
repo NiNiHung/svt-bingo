@@ -134,6 +134,16 @@
                         <div class="avatar-box" style="width:80px; height:80px; margin-left:-20px;" id="h-box-1">💎</div>
                         <div class="avatar-box" style="width:80px; height:80px; margin-left:-20px;" id="h-box-2">💎</div>
                     </div>
+                    <div id="bingo-stats" style="display: flex; gap: 15px; justify-content: center; margin: 5px 0 15px; z-index: 5; position: relative;">
+    <div style="background: rgba(255,255,255,0.15); backdrop-filter: blur(5px); padding: 8px 18px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.3); box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+        <div style="font-size: 0.6rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8; margin-bottom: 2px;">Completed</div>
+        <div style="font-size: 1.2rem; font-weight: 900;"><span id="stat-cells">0</span> <small style="font-size: 0.7rem; opacity: 0.7;">/ 9</small></div>
+    </div>
+    <div style="background: rgba(255,255,255,0.15); backdrop-filter: blur(5px); padding: 8px 18px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.3); box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+        <div style="font-size: 0.6rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8; margin-bottom: 2px;">Bingo Lines</div>
+        <div style="font-size: 1.2rem; font-weight: 900; color: #FFF;"><span id="stat-lines">0</span></div>
+    </div>
+</div>
                 </div>
                 <div class="hero-right">
                     <div class="tag">2026 BEST WISHES</div>
@@ -289,6 +299,32 @@
                 card.onclick = () => openBingo(name);
                 list.appendChild(card);
             });
+            // 插入開始：偵測數量與連線特效更新
+            const markedCount = data.grid.filter(item => item.marked).length;
+            const lineCount = calculateBingos(data.grid);
+
+            // 更新介面數字
+            document.getElementById('stat-cells').innerText = markedCount;
+            document.getElementById('stat-lines').innerText = lineCount;
+
+            // 如果產生新連線，觸發粉藍色碎紙特效 (在原本 toggleMark 已有基本邏輯，這裡強化顏色)
+            if (window.isNewBingo) {
+                confetti({
+                    particleCount: 150,
+                    spread: 70,
+                    origin: { y: 0.6 },
+                    colors: ['#F7CAC9', '#92A8D1', '#FFFFFF'] // Rose Quartz & Serenity
+                });
+                
+                // 顯示滿版文字框 (Very NICE)
+                const niceBox = document.getElementById('say-the-name');
+                niceBox.querySelector('.explosion-box').innerText = "Very NICE!!!!!";
+                niceBox.classList.add('active');
+                
+                setTimeout(() => niceBox.classList.remove('active'), 2500);
+                window.isNewBingo = false; // 重置標記
+            }
+            // 插入結束
         }
 
         function openBingo(name) {
