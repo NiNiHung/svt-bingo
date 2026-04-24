@@ -6,7 +6,6 @@
     <title>CARAT BINGO 2026</title>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@500;700;900&display=swap" rel="stylesheet">
     <style>
         :root { --rose: #F7CAC9; --serenity: #92A8D1; --bg-light: #FFF5F5; --dark: #2D2D2D; --card-bg: #FFFFFF; --glass: rgba(255, 255, 255, 0.3); }
@@ -28,10 +27,7 @@
         .hero-right h1 span { color: var(--serenity); display: block; }
         .hero-desc { font-size: 0.75rem; color: #888; font-weight: 700; margin-top: 8px; line-height: 1.5; }
 
-        /* --- 指定版 Deadline Style --- */
-        .deadline-card { background: var(--card-bg); border-radius: 15px; padding: 8px 15px; border-left: 6px solid var(--rose); text-align: center; display: flex; align-items: center; justify-content: center; gap: 10px; }
-        .deadline-label { font-size: 0.6rem; color: #999; font-weight: 900; letter-spacing: 0.5px; }
-        .deadline-date { font-size: 1.1rem; font-weight: 900; color: var(--dark); }
+        /* --- Timer --- */
         .timer-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
         .timer-box { background: var(--card-bg); border-radius: 15px; padding: 10px; text-align: center; border: 1.5px solid var(--serenity); }
         .timer-num { font-size: 1.2rem; font-weight: 900; display: block; }
@@ -108,6 +104,7 @@
         .rules-card h2 { margin: 0 0 10px; font-size: 1rem; font-weight: 900; color: var(--dark); }
         .rules-card ol { font-size: 0.75rem; line-height: 1.6; padding-left: 20px; margin: 0; color: #666; font-weight: 500; }
         
+        /* 置中關鍵修正：使用 absolute 定位配合 calc 計算 Bingo 網格中心 */
         #say-the-name { 
             position: absolute; 
             top: 50%; left: 50%; 
@@ -142,11 +139,6 @@
                 </div>
             </div>
 
-            <div class="deadline-card">
-                <div class="deadline-label">GOAL DATE</div>
-                <div class="deadline-date">2026/07/31</div>
-            </div>
-
             <div class="timer-grid">
                 <div class="timer-box"><span class="timer-num" id="d">--</span><span class="timer-label">DAYS</span></div>
                 <div class="timer-box"><span class="timer-num" id="h">--</span><span class="timer-label">HOURS</span></div>
@@ -157,7 +149,7 @@
             <div class="player-grid" id="player-list"></div>
 
             <div class="rules-card">
-                <h2>💎 遊戲規則</h2>
+                <h2>💎 玩法介紹</h2>
                 <ol>
                     <li>選擇玩家進入個人頁，點擊預設頭貼可自行上傳圖片。</li>
                     <li>填寫完成後按下「隨機並鎖定」位置即固定，無法編輯。</li>
@@ -207,11 +199,6 @@
     <input type="file" id="avatar-input" hidden accept="image/*" onchange="handleAvatarUpload(event)">
 
     <script>
-        // 初始化 Supabase
-        const supabaseUrl = 'https://enytfqnzmravfilcqklp.supabase.co';
-        const supabaseKey = 'sb_publishable_bo69LyEdm2RolpFNEwwMQw_6dF1yHN8';
-        const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
-
         const localIcons = ["./順榮.png", "./知勳.png", "./dk.png", "./勝寬.png", "./淨漢.png"];
         const players = ["金妮", "然然", "雅雯"];
         let gameData = JSON.parse(localStorage.getItem('carat_bingo_final')) || {}; 
@@ -219,57 +206,11 @@
         let currentNoteIdx = -1;
         const targetDate = new Date("2026-07-31T23:59:59").getTime();
 
-        async function init() { 
+        function init() { 
             renderPlayers(); 
             setInterval(updateTimer, 1000); 
             updateHeroAvatars(); 
-            
-            // 雲端資料初始化與即時監聽
-            await loadFromCloud();
-            subscribeToChanges();
         }
-
-        // --- Supabase 雲端同步功能開始 ---
-        async function loadFromCloud() {
-            try {
-                const { data, error } = await _supabase.from('bingo_data').select('data').eq('id', 'carat_2026').single();
-                if (data && data.data) {
-                    gameData = data.data;
-                    localStorage.setItem('carat_bingo_final', JSON.stringify(gameData));
-                    updateHeroAvatars();
-                    renderPlayers();
-                    if (document.getElementById('page-bingo').classList.contains('active')) {
-                        renderGrid();
-                    }
-                }
-            } catch (error) {
-                console.error("雲端讀取失敗", error);
-            }
-        }
-
-        async function saveToCloud() {
-            try {
-                await _supabase.from('bingo_data').upsert({ id: 'carat_2026', data: gameData });
-            } catch (error) {
-                console.error("雲端儲存失敗", error);
-            }
-        }
-
-        function subscribeToChanges() {
-            _supabase.channel('custom-all-channel')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'bingo_data', filter: 'id=eq.carat_2026' }, (payload) => {
-                    if (payload.new && payload.new.data) {
-                        gameData = payload.new.data;
-                        localStorage.setItem('carat_bingo_final', JSON.stringify(gameData));
-                        updateHeroAvatars();
-                        renderPlayers();
-                        if (document.getElementById('page-bingo').classList.contains('active')) {
-                            renderGrid();
-                        }
-                    }
-                }).subscribe();
-        }
-        // --- Supabase 雲端同步功能結束 ---
 
         function updateHeroAvatars() {
             players.forEach((name, i) => {
@@ -436,16 +377,8 @@
         }
 
         function updateBiasUI() { document.getElementById('bias-btn-img').src = localIcons[gameData[currentPlayer].biasIdx]; }
-        
-        // 修正：手動與自動儲存皆同步雲端
-        function manualSave() { 
-            save(); 
-            alert("已手動儲存並同步雲端進度！💎"); 
-        }
-        function save() { 
-            localStorage.setItem('carat_bingo_final', JSON.stringify(gameData)); 
-            saveToCloud(); 
-        }
+        function manualSave() { save(); alert("已手動儲存進度！💎"); }
+        function save() { localStorage.setItem('carat_bingo_final', JSON.stringify(gameData)); }
         
         function showHome() { 
             document.getElementById('page-bingo').classList.remove('active'); 
