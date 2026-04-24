@@ -205,12 +205,12 @@
         </div>
     </div>
 
-    <div id="page-bingo" class="page">
+   <div id="page-bingo" class="page">
         <div class="container">
             <button class="btn btn-white" onclick="showHome()">← Back</button>
+
             <div id="bingo-capture-zone">
                 <div id="say-the-name"><div class="explosion-box">아주 NICE!!!</div></div>
-                
                 <div id="watermark-overlay"></div>
                 
                 <div class="avatar-box" style="width:90px; height:90px; font-size:40px; z-index:5;" id="current-avatar-box" onclick="triggerUpload()">💎</div>
@@ -219,32 +219,27 @@
                 
                 <div class="bingo-board" id="bingo-grid"></div>
             </div>
-<div class="bingo-board" id="bingo-grid">
-   <div class="stat-container">
-    <div style="text-align: center; flex: 1;">
-        <div id="stat-cells" class="stat-value">0</div>
-        <div class="stat-label">Done</div>
-    </div>
 
-    <div class="stat-divider"></div>
-
-    <div style="text-align: center; flex: 1;">
-        <div id="stat-lines" class="stat-value">0</div>
-        <div class="stat-label">Bingo</div>
-    </div>
-</div>
-
-<div style="text-align: center; margin-top: 20px;">
-    <div class="bias-toggle-btn" onclick="nextBias()" style="margin: 0 auto; width: 60px; height: 60px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border: 2px solid #F0F0F0;">
-        <img id="bias-btn-img" src="" style="width: 80%; height: 80%; object-fit: contain;">
-    </div>
-    <div style="font-size: 0.65rem; color: #BBBBBB; font-weight: 800; letter-spacing: 1px; margin-top: 8px;">SWITCH STAMP</div>
-</div>
-            <div class="controls">
-                <div style="grid-column: span 2; text-align: center;">
-                    <div class="bias-toggle-btn" onclick="nextBias()"><img id="bias-btn-img" src=""></div>
-                    <span style="font-size: 0.6rem; color: #999; font-weight: 700;">SWITCH STAMP</span>
+            <div class="stat-container">
+                <div style="text-align: center; flex: 1;">
+                    <div id="stat-cells" class="stat-value">0</div>
+                    <div class="stat-label">Done</div>
                 </div>
+                <div class="stat-divider"></div>
+                <div style="text-align: center; flex: 1;">
+                    <div id="stat-lines" class="stat-value">0</div>
+                    <div class="stat-label">Bingo</div>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 10px;">
+                <div class="bias-toggle-btn" onclick="nextBias()">
+                    <img id="bias-btn-img" src="" style="width: 80%; height: 80%; object-fit: contain;">
+                </div>
+                <div style="font-size: 0.65rem; color: #BBBBBB; font-weight: 800; letter-spacing: 1px; margin-top: 8px;">SWITCH STAMP</div>
+            </div>
+
+            <div class="controls">
                 <button id="lock-btn" class="btn btn-rose" onclick="shuffleAndLock()">🎲 隨機並鎖定</button>
                 <button id="save-btn" class="btn btn-serenity" onclick="manualSave()">💾 點我儲存</button>
             </div>
@@ -263,6 +258,7 @@
     <input type="file" id="avatar-input" hidden accept="image/*" onchange="handleAvatarUpload(event)">
 
    <script>
+    // --- 從這裡開始整塊替換 ---
     const supabaseUrl = 'https://enytfqnzmravfilcqklp.supabase.co';
     const supabaseKey = 'sb_publishable_bo69LyEdm2RolpFNEwwMQw_6dF1yHN8';
     const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
@@ -272,21 +268,13 @@
     let gameData = JSON.parse(localStorage.getItem('carat_bingo_final')) || {}; 
     let currentPlayer = "";
     let currentNoteIdx = -1;
-    const targetDate = new Date("2026-07-31T23:59:59").getTime();
 
     async function init() { 
-        // 1. 初始化計時器
         updateTimer();
         setInterval(updateTimer, 1000); 
-
-        // 2. 從雲端抓取最新資料
         await loadFromCloud();
-
-        // 3. 畫出首頁玩家與大頭貼
         updateHeroAvatars(); 
         renderPlayers(); 
-        
-        // 4. 開啟即時監聽
         subscribeToChanges();
     }
 
@@ -297,17 +285,13 @@
                 gameData = data.data;
                 localStorage.setItem('carat_bingo_final', JSON.stringify(gameData));
             }
-        } catch (error) {
-            console.error("雲端讀取失敗", error);
-        }
+        } catch (error) { console.error("雲端讀取失敗", error); }
     }
 
     async function saveToCloud() {
         try {
             await _supabase.from('bingo_data').upsert({ id: 'carat_test', data: gameData });
-        } catch (error) {
-            console.error("雲端儲存失敗", error);
-        }
+        } catch (error) { console.error("雲端儲存失敗", error); }
     }
 
     function subscribeToChanges() {
@@ -363,25 +347,10 @@
         const wmOverlay = document.getElementById('watermark-overlay');
         wmOverlay.innerHTML = ""; 
 
-        let wmImg = "";
         if (name === "雅雯" || name === "金妮") {
             captureZone.style.background = "linear-gradient(135deg, #273445, #296985, #93A6AE)";
-            wmImg = "./蝴蝶.png";
-        } else if (name === "然然") {
+        } else {
             captureZone.style.background = "linear-gradient(135deg, var(--rose), var(--serenity))";
-            wmImg = "./蝴蝶結.png";
-        }
-
-        if (wmImg) {
-            const imgTop = document.createElement('img');
-            imgTop.src = wmImg; 
-            imgTop.className = (name === "然然") ? "wm-style-top wm-ran-top" : "wm-style-top";
-            wmOverlay.appendChild(imgTop);
-            const imgMid = document.createElement('img');
-            imgMid.src = wmImg; 
-            imgMid.className = (name === "然然") ? "wm-style-mid wm-ran-mid" : "wm-style-mid";
-            if (name === "雅雯" || name === "金妮") imgMid.classList.add('wm-mirror'); 
-            wmOverlay.appendChild(imgMid);
         }
         updateBiasUI();
         renderGrid();
@@ -401,15 +370,11 @@
         data.grid.forEach((item, i) => {
             const cell = document.createElement('div');
             cell.className = `cell ${item.marked ? 'marked' : ''}`;
-            
             if (!data.locked) {
                 const area = document.createElement('textarea');
                 area.value = item.text;
                 area.placeholder = i === 4 ? "自由格" : "輸入目標";
-                area.oninput = (e) => { 
-                    data.grid[i].text = e.target.value; 
-                    autoSizeText(e.target);
-                };
+                area.oninput = (e) => { data.grid[i].text = e.target.value; autoSizeText(e.target); };
                 cell.appendChild(area);
                 setTimeout(() => autoSizeText(area), 10);
             } else {
@@ -418,7 +383,6 @@
                 txt.innerText = item.text;
                 cell.appendChild(txt);
                 autoSizeText(txt);
-                
                 if (item.marked) {
                     const s = document.createElement('img');
                     s.className = "stamp-img";
@@ -431,27 +395,13 @@
                 cell.onmouseup = cell.ontouchend = () => { clearTimeout(timer); };
             }
             gridContainer.appendChild(cell);
-       function renderGrid() {
-        const gridContainer = document.getElementById('bingo-grid');
-        // ... 中間畫格子的代碼省略 ...
-        
-        data.grid.forEach((item, i) => {
-            // ... 這裡是在畫每一格的內容 ...
-            gridContainer.appendChild(cell);
         });
 
-        // ======= 請把這段放在這裡 =======
-        const markedCount = data.grid.filter(g => g.marked).length;
-        const bingoCount = calculateBingos(data.grid);
-        
-        // 這兩行要對應我們剛剛改的 HTML ID
+        // 更新 Done/Bingo 數字
         const cellsEl = document.getElementById('stat-cells');
         const linesEl = document.getElementById('stat-lines');
-        
-        if(cellsEl) cellsEl.innerText = markedCount;
-        if(linesEl) linesEl.innerText = bingoCount;
-        // ===============================
-    } // 這是 renderGrid 的結尾
+        if(cellsEl) cellsEl.innerText = data.grid.filter(g => g.marked).length;
+        if(linesEl) linesEl.innerText = calculateBingos(data.grid);
     }
 
     function autoSizeText(el) {
@@ -471,17 +421,11 @@
         const oldBingos = calculateBingos(data.grid);
         data.grid[idx].marked = !data.grid[idx].marked;
         const newBingos = calculateBingos(data.grid);
-        
         if (newBingos > oldBingos) {
             const el = document.getElementById('say-the-name');
             if(el) {
                 el.classList.add('active');
-                confetti({
-                    particleCount: 200,
-                    spread: 90,
-                    origin: { y: 0.5 },
-                    colors: ['#F7CAC9', '#92A8D1', '#FFFFFF']
-                });
+                confetti({ particleCount: 200, spread: 90, origin: { y: 0.5 }, colors: ['#F7CAC9', '#92A8D1', '#FFFFFF'] });
                 setTimeout(() => el.classList.remove('active'), 2500);
             }
         }
@@ -530,7 +474,7 @@
         if(img) img.src = localIcons[gameData[currentPlayer].biasIdx]; 
     }
     
-    function manualSave() { save(); alert("已手動儲存並同步雲端進度！💎"); }
+    function manualSave() { save(); alert("已儲存！💎"); }
     function save() { 
         localStorage.setItem('carat_bingo_final', JSON.stringify(gameData)); 
         saveToCloud(); 
@@ -558,37 +502,18 @@
     }
 
     function updateTimer() {
-    // 這裡的日期請確保是妳要的 D-Day
-    const targetDate = new Date("2026-07-31T23:59:59").getTime();
-    const now = new Date().getTime();
-    const diff = targetDate - now;
+        const target = new Date("2026-07-31T23:59:59").getTime();
+        const diff = target - new Date().getTime();
+        const dEl = document.getElementById('d'), hEl = document.getElementById('h'), mEl = document.getElementById('m'), sEl = document.getElementById('s');
+        if (!dEl || diff < 0) return;
+        dEl.innerText = Math.floor(diff / (1000 * 60 * 60 * 24)).toString().padStart(2, '0');
+        hEl.innerText = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)).toString().padStart(2, '0');
+        mEl.innerText = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)).toString().padStart(2, '0');
+        sEl.innerText = Math.floor((diff % (1000 * 60)) / 1000).toString().padStart(2, '0');
+    }
 
-    // 抓取 HTML 元素
-    const dEl = document.getElementById('d');
-    const hEl = document.getElementById('h');
-    const mEl = document.getElementById('m');
-    const sEl = document.getElementById('s');
-
-    // 如果找不到元素就跳出，避免程式報錯導致玩家列表跑不出來
-    if (!dEl || diff < 0) return;
-
-    // 計算數值並填入
-    dEl.innerText = Math.floor(diff / (1000 * 60 * 60 * 24)).toString().padStart(2, '0');
-    hEl.innerText = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)).toString().padStart(2, '0');
-    mEl.innerText = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)).toString().padStart(2, '0');
-    sEl.innerText = Math.floor((diff % (1000 * 60)) / 1000).toString().padStart(2, '0');
-}
-
-// 確保 init 裡面有啟動它
-async function init() {
-    updateTimer(); // 先跑第一次
-    setInterval(updateTimer, 1000); // 每秒跑一次
-    
-    // ... 後面原本的 loadFromCloud() 和 renderPlayers() 保持不動 ...
-    if (typeof loadFromCloud === 'function') await loadFromCloud();
-    if (typeof renderPlayers === 'function') renderPlayers();
-}
     init();
+    // --- 替換到這裡結束 ---
 </script>
 </body>
 </html>
