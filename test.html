@@ -344,34 +344,57 @@
         });
     }
 
-    async function openBingo(name) {
-        await loadFromCloud(); 
+   async function openBingo(name) { // 記得加 async 喔！
+            await loadFromCloud(); // 這是我們剛剛加的強力同步
+            
+            currentPlayer = name;
+            if (!gameData[name]) {
+                gameData[name] = {
+                    grid: Array(9).fill().map((_, i) => ({ text: i === 4 ? "自由格" : "", marked: i === 4, note: "" })),
+                    biasIdx: 0, locked: false, avatar: ""
+                };
+            }
 
-        currentPlayer = name;
-        if (!gameData[name]) {
-            gameData[name] = {
-                grid: Array(9).fill().map((_, i) => ({ text: i === 4 ? "自由格" : "", marked: i === 4, note: "" })),
-                biasIdx: 0, locked: false, avatar: ""
-            };
+            document.getElementById('page-home').classList.remove('active');
+            document.getElementById('page-bingo').classList.add('active');
+            document.getElementById('current-player-name').innerText = name;
+            document.getElementById('current-avatar-box').innerHTML = gameData[name].avatar ? `<img src="${gameData[name].avatar}">` : "💎";
+            
+            // --- 💡 從這裡開始覆蓋：背景與浮水印邏輯 ---
+            const captureZone = document.getElementById('bingo-capture-zone');
+            const wmOverlay = document.getElementById('watermark-overlay');
+            wmOverlay.innerHTML = ""; 
+
+            let wmImg = "";
+            let isRan = (name === "然然");
+
+            if (name === "雅雯" || name === "金妮") {
+                captureZone.style.background = "linear-gradient(135deg, #273445, #296985, #93A6AE)";
+                wmImg = "./蝴蝶.png";
+            } else if (isRan) {
+                captureZone.style.background = "linear-gradient(135deg, var(--rose), var(--serenity))";
+                wmImg = "./蝴蝶結.png";
+            }
+
+            if (wmImg) {
+                const imgTop = document.createElement('img');
+                imgTop.src = wmImg; 
+                imgTop.className = isRan ? "wm-style-top wm-ran-top" : "wm-style-top";
+                wmOverlay.appendChild(imgTop);
+
+                const imgMid = document.createElement('img');
+                imgMid.src = wmImg; 
+                imgMid.className = isRan ? "wm-style-mid wm-ran-mid" : "wm-style-mid";
+                if (name === "雅雯" || name === "金妮") {
+                    imgMid.classList.add('wm-mirror'); 
+                }
+                wmOverlay.appendChild(imgMid);
+            }
+            // --- 💡 覆蓋到這裡結束 ---
+
+            updateBiasUI();
+            renderGrid();
         }
-        document.getElementById('page-home').classList.remove('active');
-        document.getElementById('page-bingo').classList.add('active');
-        document.getElementById('current-player-name').innerText = name;
-        document.getElementById('current-avatar-box').innerHTML = gameData[name].avatar ? `<img src="${gameData[name].avatar}">` : "💎";
-        
-        const captureZone = document.getElementById('bingo-capture-zone');
-        const wmOverlay = document.getElementById('watermark-overlay');
-        wmOverlay.innerHTML = ""; 
-
-        if (name === "雅雯" || name === "金妮") {
-            captureZone.style.background = "linear-gradient(135deg, #273445, #296985, #93A6AE)";
-        } else {
-            captureZone.style.background = "linear-gradient(135deg, var(--rose), var(--serenity))";
-        }
-        updateBiasUI();
-        renderGrid();
-    }
-
  function renderGrid() {
         const gridContainer = document.getElementById('bingo-grid');
         if (!gridContainer) return;
