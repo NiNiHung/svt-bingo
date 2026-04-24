@@ -236,35 +236,59 @@
 
     <input type="file" id="avatar-input" hidden accept="image/*" onchange="handleAvatarUpload(event)">
 
-    <script>
-        // 初始化 Supabase
-        const supabaseUrl = 'https://enytfqnzmravfilcqklp.supabase.co';
-        const supabaseKey = 'sb_publishable_bo69LyEdm2RolpFNEwwMQw_6dF1yHN8';
-        const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
+   <script>
+    const supabaseUrl = 'https://enytfqnzmravfilcqklp.supabase.co';
+    const supabaseKey = 'sb_publishable_bo69LyEdm2RolpFNEwwMQw_6dF1yHN8';
+    const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
-        const localIcons = ["./順榮.png", "./知勳.png", "./dk.png", "./勝寬.png", "./淨漢.png"];
-        const players = ["金妮", "然然", "雅雯"];
-        let gameData = JSON.parse(localStorage.getItem('carat_bingo_final')) || {}; 
-        let currentPlayer = "";
-        let currentNoteIdx = -1;
-        const targetDate = new Date("2026-07-31T23:59:59").getTime();
+    const localIcons = ["./順榮.png", "./知勳.png", "./dk.png", "./勝寬.png", "./淨漢.png"];
+    const players = ["金妮", "然然", "雅雯"];
+    let gameData = JSON.parse(localStorage.getItem('carat_bingo_final')) || {}; 
+    let currentPlayer = "";
+    let currentNoteIdx = -1;
+    const targetDate = new Date("2026-07-31T23:59:59").getTime();
 
-        async function init() { 
-            renderPlayers(); 
-            setInterval(updateTimer, 1000); 
-            updateHeroAvatars(); 
-            
-            // 雲端資料初始化與即時監聽
-            await loadFromCloud();
-            subscribeToChanges();
+    async function init() { 
+        // 1. 初始化計時器
+        updateTimer();
+        setInterval(updateTimer, 1000); 
+
+        // 2. 從雲端抓取最新資料
+        await loadFromCloud();
+
+        // 3. 畫出首頁玩家與大頭貼
+        updateHeroAvatars(); 
+        renderPlayers(); 
+        
+        // 4. 開啟即時監聽
+        subscribeToChanges();
+    }
+
+    async function loadFromCloud() {
+        try {
+            const { data, error } = await _supabase.from('bingo_data').select('data').eq('id', 'carat_test').single();
+            if (data && data.data) {
+                gameData = data.data;
+                localStorage.setItem('carat_bingo_final', JSON.stringify(gameData));
+            }
+        } catch (error) {
+            console.error("雲端讀取失敗", error);
         }
+    }
 
-        // --- Supabase 雲端同步功能開始 ---
-        async function loadFromCloud() {
-            try {
-                const { data, error } = await _supabase.from('bingo_data').select('data').eq('id', 'carat_test').single();
-                if (data && data.data) {
-                    gameData = data.data;
+    async function saveToCloud() {
+        try {
+            await _supabase.from('bingo_data').upsert({ id: 'carat_test', data: gameData });
+        } catch (error) {
+            console.error("雲端儲存失敗", error);
+        }
+    }
+
+    function subscribeToChanges() {
+        _supabase.channel('custom-all-channel')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'bingo_data', filter: 'id=eq.carat_test' }, (payload) => {
+                if (payload.new && payload.new.data) {
+                    gameData = payload.new.data;
                     localStorage.setItem('carat_bingo_final', JSON.stringify(gameData));
                     updateHeroAvatars();
                     renderPlayers();
@@ -272,295 +296,237 @@
                         renderGrid();
                     }
                 }
-            } catch (error) {
-                console.error("雲端讀取失敗", error);
-            }
+            }).subscribe();
+    }
+
+    function updateHeroAvatars() {
+        players.forEach((name, i) => {
+            const box = document.getElementById(`h-box-${i}`);
+            if(box) box.innerHTML = (gameData[name] && gameData[name].avatar) ? `<img src="${gameData[name].avatar}">` : "💎";
+        });
+    }
+
+    function renderPlayers() {
+        const list = document.getElementById('player-list');
+        if (!list) return;
+        list.innerHTML = "";
+        players.forEach((name) => {
+            const card = document.createElement('div');
+            card.className = "player-card";
+            const avatarHTML = (gameData[name] && gameData[name].avatar) ? `<img src="${gameData[name].avatar}">` : "💎";
+            card.innerHTML = `<div class="avatar-box">${avatarHTML}</div><span style="font-weight:900">${name}</span>`;
+            card.onclick = () => openBingo(name);
+            list.appendChild(card);
+        });
+    }
+
+    function openBingo(name) {
+        currentPlayer = name;
+        if (!gameData[name]) {
+            gameData[name] = {
+                grid: Array(9).fill().map((_, i) => ({ text: i === 4 ? "自由格" : "", marked: i === 4, note: "" })),
+                biasIdx: 0, locked: false, avatar: ""
+            };
+        }
+        document.getElementById('page-home').classList.remove('active');
+        document.getElementById('page-bingo').classList.add('active');
+        document.getElementById('current-player-name').innerText = name;
+        document.getElementById('current-avatar-box').innerHTML = gameData[name].avatar ? `<img src="${gameData[name].avatar}">` : "💎";
+        
+        const captureZone = document.getElementById('bingo-capture-zone');
+        const wmOverlay = document.getElementById('watermark-overlay');
+        wmOverlay.innerHTML = ""; 
+
+        let wmImg = "";
+        if (name === "雅雯" || name === "金妮") {
+            captureZone.style.background = "linear-gradient(135deg, #273445, #296985, #93A6AE)";
+            wmImg = "./蝴蝶.png";
+        } else if (name === "然然") {
+            captureZone.style.background = "linear-gradient(135deg, var(--rose), var(--serenity))";
+            wmImg = "./蝴蝶結.png";
         }
 
-        async function saveToCloud() {
-            try {
-                await _supabase.from('bingo_data').upsert({ id: 'carat_test', data: gameData });
-            } catch (error) {
-                console.error("雲端儲存失敗", error);
-            }
+        if (wmImg) {
+            const imgTop = document.createElement('img');
+            imgTop.src = wmImg; 
+            imgTop.className = (name === "然然") ? "wm-style-top wm-ran-top" : "wm-style-top";
+            wmOverlay.appendChild(imgTop);
+            const imgMid = document.createElement('img');
+            imgMid.src = wmImg; 
+            imgMid.className = (name === "然然") ? "wm-style-mid wm-ran-mid" : "wm-style-mid";
+            if (name === "雅雯" || name === "金妮") imgMid.classList.add('wm-mirror'); 
+            wmOverlay.appendChild(imgMid);
         }
+        updateBiasUI();
+        renderGrid();
+    }
 
-        function subscribeToChanges() {
-            _supabase.channel('custom-all-channel')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'bingo_data', filter: 'id=eq.carat_test' }, (payload) => {
-                    if (payload.new && payload.new.data) {
-                        gameData = payload.new.data;
-                        localStorage.setItem('carat_bingo_final', JSON.stringify(gameData));
-                        updateHeroAvatars();
-                        renderPlayers();
-                        if (document.getElementById('page-bingo').classList.contains('active')) {
-                            renderGrid();
-                        }
-                    }
-                }).subscribe();
-        }
-        // --- Supabase 雲端同步功能結束 ---
+    function renderGrid() {
+        const gridContainer = document.getElementById('bingo-grid');
+        const effectLayer = document.getElementById('say-the-name');
+        if (!gridContainer) return;
+        gridContainer.innerHTML = "";
+        if (effectLayer) gridContainer.appendChild(effectLayer);
 
-        function updateHeroAvatars() {
-            players.forEach((name, i) => {
-                const box = document.getElementById(`h-box-${i}`);
-                if(box) box.innerHTML = (gameData[name] && gameData[name].avatar) ? `<img src="${gameData[name].avatar}">` : "💎";
-            });
-        }
+        const data = gameData[currentPlayer];
+        document.getElementById('lock-btn').style.display = data.locked ? "none" : "block";
+        document.getElementById('save-btn').style.display = data.locked ? "none" : "block";
 
-        function renderPlayers() {
-            const list = document.getElementById('player-list');
-            list.innerHTML = "";
-            players.forEach((name) => {
-                const card = document.createElement('div');
-                card.className = "player-card";
-                const avatarHTML = (gameData[name] && gameData[name].avatar) ? `<img src="${gameData[name].avatar}">` : "💎";
-                card.innerHTML = `<div class="avatar-box">${avatarHTML}</div><span style="font-weight:900">${name}</span>`;
-                card.onclick = () => openBingo(name);
-                list.appendChild(card);
-            });
-        }
-
-        function openBingo(name) {
-            currentPlayer = name;
-            if (!gameData[name]) {
-                gameData[name] = {
-                    grid: Array(9).fill().map((_, i) => ({ text: i === 4 ? "自由格" : "", marked: i === 4, note: "" })),
-                    biasIdx: 0, locked: false, avatar: ""
+        data.grid.forEach((item, i) => {
+            const cell = document.createElement('div');
+            cell.className = `cell ${item.marked ? 'marked' : ''}`;
+            
+            if (!data.locked) {
+                const area = document.createElement('textarea');
+                area.value = item.text;
+                area.placeholder = i === 4 ? "自由格" : "輸入目標";
+                area.oninput = (e) => { 
+                    data.grid[i].text = e.target.value; 
+                    autoSizeText(e.target);
                 };
-            }
-            document.getElementById('page-home').classList.remove('active');
-            document.getElementById('page-bingo').classList.add('active');
-            document.getElementById('current-player-name').innerText = name;
-            document.getElementById('current-avatar-box').innerHTML = gameData[name].avatar ? `<img src="${gameData[name].avatar}">` : "💎";
-            
-            const captureZone = document.getElementById('bingo-capture-zone');
-            const wmOverlay = document.getElementById('watermark-overlay');
-            wmOverlay.innerHTML = ""; 
-
-            let wmImg = "";
-            let isRan = (name === "然然");
-
-            if (name === "雅雯" || name === "金妮") {
-                captureZone.style.background = "linear-gradient(135deg, #273445, #296985, #93A6AE)";
-                wmImg = "./蝴蝶.png";
-            } else if (isRan) {
-                captureZone.style.background = "linear-gradient(135deg, var(--rose), var(--serenity))";
-                wmImg = "./蝴蝶結.png";
-            }
-
-            if (wmImg) {
-                const imgTop = document.createElement('img');
-                imgTop.src = wmImg; 
-                imgTop.className = isRan ? "wm-style-top wm-ran-top" : "wm-style-top";
-                wmOverlay.appendChild(imgTop);
-
-                const imgMid = document.createElement('img');
-                imgMid.src = wmImg; 
-                imgMid.className = isRan ? "wm-style-mid wm-ran-mid" : "wm-style-mid";
-                if (name === "雅雯" || name === "金妮") {
-                    imgMid.classList.add('wm-mirror'); 
-                }
-                wmOverlay.appendChild(imgMid);
-            }
-
-            updateBiasUI();
-            renderGrid();
-        }
-
-     function renderGrid() {
-            const gridContainer = document.getElementById('bingo-grid');
-            const effectLayer = document.getElementById('say-the-name');
-            gridContainer.innerHTML = "";
-            gridContainer.appendChild(effectLayer);
-
-            const data = gameData[currentPlayer];
-            document.getElementById('lock-btn').style.display = data.locked ? "none" : "block";
-            document.getElementById('save-btn').style.display = data.locked ? "none" : "block";
-
-            data.grid.forEach((item, i) => {
-                const cell = document.createElement('div');
-                cell.className = `cell ${item.marked ? 'marked' : ''}`;
+                cell.appendChild(area);
+                setTimeout(() => autoSizeText(area), 10);
+            } else {
+                const txt = document.createElement('div');
+                txt.className = "cell-text";
+                txt.innerText = item.text;
+                cell.appendChild(txt);
+                autoSizeText(txt);
                 
-                if (!data.locked) {
-                    const area = document.createElement('textarea');
-                    area.value = item.text;
-                    area.placeholder = i === 4 ? "自由格" : "輸入目標";
-                    area.oninput = (e) => { 
-                        data.grid[i].text = e.target.value; 
-                        autoSizeText(e.target);
-                    };
-                    cell.appendChild(area);
-                    setTimeout(() => autoSizeText(area), 10);
-                } else {
-                    const txt = document.createElement('div');
-                    txt.className = "cell-text";
-                    txt.innerText = item.text;
-                    cell.appendChild(txt);
-                    autoSizeText(txt);
-                    
-                    if (item.marked) {
-                        const s = document.createElement('img');
-                        s.className = "stamp-img";
-                        s.src = localIcons[data.biasIdx];
-                        cell.appendChild(s);
-                    }
-                    cell.onclick = () => toggleMark(i);
-                    let timer;
-                    cell.onmousedown = cell.ontouchstart = () => { timer = setTimeout(() => openNote(i), 600); };
-                    cell.onmouseup = cell.ontouchend = () => { clearTimeout(timer); };
+                if (item.marked) {
+                    const s = document.createElement('img');
+                    s.className = "stamp-img";
+                    s.src = localIcons[data.biasIdx];
+                    cell.appendChild(s);
                 }
-                gridContainer.appendChild(cell);
-            });
+                cell.onclick = () => toggleMark(i);
+                let timer;
+                cell.onmousedown = cell.ontouchstart = () => { timer = setTimeout(() => openNote(i), 600); };
+                cell.onmouseup = cell.ontouchend = () => { clearTimeout(timer); };
+            }
+            gridContainer.appendChild(cell);
+        });
 
-            // --- 這一段就是妳要的邏輯：更新數據 ---
-            const markedCount = data.grid.filter(g => g.marked).length;
-            const bingoCount = calculateBingos(data.grid);
-            
-            // 更新九宮格下方的新英文面板
-            const cellsEl = document.getElementById('stat-cells');
-            const linesEl = document.getElementById('stat-lines');
-            if(cellsEl) cellsEl.innerText = markedCount;
-            if(linesEl) linesEl.innerText = bingoCount;
+        const markedCount = data.grid.filter(g => g.marked).length;
+        const bingoCount = calculateBingos(data.grid);
+        if(document.getElementById('stat-cells')) document.getElementById('stat-cells').innerText = markedCount;
+        if(document.getElementById('stat-lines')) document.getElementById('stat-lines').innerText = bingoCount;
+    }
 
-            // 更新原本最下面的舊數據區塊
-            if(document.getElementById('count-marked')) document.getElementById('count-marked').innerText = markedCount;
-            if(document.getElementById('count-bingo')) document.getElementById('count-bingo').innerText = bingoCount;
+    function autoSizeText(el) {
+        if (!el) return;
+        let size = 0.75;
+        el.style.fontSize = size + "rem";
+        if (el.tagName === 'TEXTAREA') {
+            while (el.scrollHeight > el.offsetHeight && size > 0.4) {
+                size -= 0.05;
+                el.style.fontSize = size + "rem";
+            }
         }
-                    cell.onclick = () => toggleMark(i);
-                    
-                    let pressTimer;
-                    cell.onmousedown = cell.ontouchstart = () => {
-                        pressTimer = setTimeout(() => openNote(i), 600);
-                    };
-                    cell.onmouseup = cell.ontouchend = () => {
-                        clearTimeout(pressTimer);
-                    };
-                }
-                gridContainer.appendChild(cell);
-            });
-        }
+    }
 
-      function toggleMark(idx) {
-            const data = gameData[currentPlayer];
-            
-            // 1. 蓋章前：先記住現在有幾條連線
-            const oldBingos = calculateBingos(data.grid);
-            
-            // 2. 執行蓋章：把該格狀態反轉 (有印章變沒印章，沒印章變有印章)
-            data.grid[idx].marked = !data.grid[idx].marked;
-            
-            // 3. 蓋章後：重新計算連線數
-            const newBingos = calculateBingos(data.grid);
-            
-            // 4. 判斷是否「新達成連線」
-            if (newBingos > oldBingos) {
-                const el = document.getElementById('say-the-name');
-                
-                // 確保對話框文字是妳要的（Very NICE!!!!!）
-                const box = el.querySelector('.explosion-box');
-                if(box) box.innerText = "아주 NICE!!!!!";
-                
-                // 顯示對話框特效
+    function toggleMark(idx) {
+        const data = gameData[currentPlayer];
+        const oldBingos = calculateBingos(data.grid);
+        data.grid[idx].marked = !data.grid[idx].marked;
+        const newBingos = calculateBingos(data.grid);
+        
+        if (newBingos > oldBingos) {
+            const el = document.getElementById('say-the-name');
+            if(el) {
                 el.classList.add('active');
-                
-                // 噴發粉藍碎紙 (Rose Quartz & Serenity)
                 confetti({
                     particleCount: 200,
                     spread: 90,
                     origin: { y: 0.5 },
                     colors: ['#F7CAC9', '#92A8D1', '#FFFFFF']
                 });
-                
-                // 2.5 秒後自動收起對話框
                 setTimeout(() => el.classList.remove('active'), 2500);
             }
-            
-            // 5. 存檔並重新畫出網格（這會同時觸發數據更新）
-            save(); 
-            renderGrid();
         }
+        save(); renderGrid();
+    }
 
-        function calculateBingos(grid) {
-            const lines = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
-            return lines.filter(l => l.every(idx => grid[idx].marked)).length;
-        }
+    function calculateBingos(grid) {
+        const lines = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+        return lines.filter(l => l.every(idx => grid[idx].marked)).length;
+    }
 
-        function openNote(idx) {
-            currentNoteIdx = idx;
-            const goalText = gameData[currentPlayer].grid[idx].text || "未設定目標";
-            document.getElementById('note-subtitle').innerText = `目標：${goalText}`;
-            document.getElementById('note-input').value = gameData[currentPlayer].grid[idx].note || "";
-            document.getElementById('note-modal').style.display = "flex";
-        }
+    function openNote(idx) {
+        currentNoteIdx = idx;
+        const goalText = gameData[currentPlayer].grid[idx].text || "未設定目標";
+        document.getElementById('note-subtitle').innerText = `目標：${goalText}`;
+        document.getElementById('note-input').value = gameData[currentPlayer].grid[idx].note || "";
+        document.getElementById('note-modal').style.display = "flex";
+    }
 
-        function closeNote() {
-            gameData[currentPlayer].grid[currentNoteIdx].note = document.getElementById('note-input').value;
-            document.getElementById('note-modal').style.display = "none";
-            save();
-        }
+    function closeNote() {
+        gameData[currentPlayer].grid[currentNoteIdx].note = document.getElementById('note-input').value;
+        document.getElementById('note-modal').style.display = "none";
+        save();
+    }
 
-        function shuffleAndLock() {
-            if (confirm("鎖定後位置將隨機重排且無法編輯目標，確定執行？")) {
-                let data = gameData[currentPlayer];
-                let mid = data.grid[4];
-                let rest = data.grid.filter((_, i) => i !== 4);
-                rest.sort(() => Math.random() - 0.5);
-                rest.splice(4, 0, mid);
-                data.grid = rest;
-                data.locked = true;
-                save(); renderGrid();
-            }
+    function shuffleAndLock() {
+        if (confirm("鎖定後位置將隨機重排且無法編輯目標，確定執行？")) {
+            let data = gameData[currentPlayer];
+            let mid = data.grid[4];
+            let rest = data.grid.filter((_, i) => i !== 4);
+            rest.sort(() => Math.random() - 0.5);
+            rest.splice(4, 0, mid);
+            data.grid = rest;
+            data.locked = true;
+            save(); renderGrid();
         }
+    }
 
-        function nextBias() {
-            gameData[currentPlayer].biasIdx = (gameData[currentPlayer].biasIdx + 1) % localIcons.length;
-            updateBiasUI(); save(); renderGrid();
-        }
+    function nextBias() {
+        gameData[currentPlayer].biasIdx = (gameData[currentPlayer].biasIdx + 1) % localIcons.length;
+        updateBiasUI(); save(); renderGrid();
+    }
 
-        function updateBiasUI() { document.getElementById('bias-btn-img').src = localIcons[gameData[currentPlayer].biasIdx]; }
-        
-        // 修正：手動與自動儲存皆同步雲端
-        function manualSave() { 
-            save(); 
-            alert("已手動儲存並同步雲端進度！💎"); 
-        }
-        function save() { 
-            localStorage.setItem('carat_bingo_final', JSON.stringify(gameData)); 
-            saveToCloud(); 
-        }
-        
-        function showHome() { 
-            document.getElementById('page-bingo').classList.remove('active'); 
-            document.getElementById('page-home').classList.add('active'); 
-            updateHeroAvatars();
-            renderPlayers(); 
-        }
+    function updateBiasUI() { 
+        const img = document.getElementById('bias-btn-img');
+        if(img) img.src = localIcons[gameData[currentPlayer].biasIdx]; 
+    }
+    
+    function manualSave() { save(); alert("已手動儲存並同步雲端進度！💎"); }
+    function save() { 
+        localStorage.setItem('carat_bingo_final', JSON.stringify(gameData)); 
+        saveToCloud(); 
+    }
+    
+    function showHome() { 
+        document.getElementById('page-bingo').classList.remove('active'); 
+        document.getElementById('page-home').classList.add('active'); 
+        updateHeroAvatars();
+        renderPlayers(); 
+    }
 
-        function triggerUpload() { document.getElementById('avatar-input').click(); }
-        function handleAvatarUpload(event) {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    gameData[currentPlayer].avatar = e.target.result;
-                    document.getElementById('current-avatar-box').innerHTML = `<img src="${e.target.result}">`;
-                    save();
-                };
-                reader.readAsDataURL(file);
-            }
+    function triggerUpload() { document.getElementById('avatar-input').click(); }
+    function handleAvatarUpload(event) {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                gameData[currentPlayer].avatar = e.target.result;
+                document.getElementById('current-avatar-box').innerHTML = `<img src="${e.target.result}">`;
+                save();
+            };
+            reader.readAsDataURL(file);
         }
+    }
 
-        function updateTimer() {
-            const diff = targetDate - new Date().getTime();
-            if (diff < 0) return;
-            document.getElementById('d').innerText = Math.floor(diff / (1000 * 60 * 60 * 24)).toString().padStart(2, '0');
-            document.getElementById('h').innerText = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)).toString().padStart(2, '0');
-            document.getElementById('m').innerText = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)).toString().padStart(2, '0');
-            document.getElementById('s').innerText = Math.floor((diff % (1000 * 60)) / 1000).toString().padStart(2, '0');
-        }
+    function updateTimer() {
+        const diff = targetDate - new Date().getTime();
+        const d = document.getElementById('d');
+        if (!d || diff < 0) return;
+        document.getElementById('d').innerText = Math.floor(diff / (1000 * 60 * 60 * 24)).toString().padStart(2, '0');
+        document.getElementById('h').innerText = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)).toString().padStart(2, '0');
+        document.getElementById('m').innerText = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)).toString().padStart(2, '0');
+        document.getElementById('s').innerText = Math.floor((diff % (1000 * 60)) / 1000).toString().padStart(2, '0');
+    }
 
-        init();
-    </script>
+    init();
+</script>
 </body>
 </html>
