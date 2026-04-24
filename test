@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CARAT BINGO 2026</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@500;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root { --rose: #F7CAC9; --serenity: #92A8D1; --bg-light: #FFF5F5; --dark: #2D2D2D; --card-bg: #FFFFFF; --glass: rgba(255, 255, 255, 0.3); }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { margin: 0; padding: 0; background-color: var(--bg-light); font-family: 'Noto Sans TC', sans-serif; color: var(--dark); display: flex; flex-direction: column; align-items: center; }
+        
+        .page { display: none; width: 100%; max-width: 1000px; animation: fadeIn 0.3s ease; }
+        .page.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .container { width: 92%; margin: 15px auto; display: flex; flex-direction: column; gap: 15px; }
+
+        /* --- Hero --- */
+        .hero-section { display: grid; grid-template-columns: 1fr 1.2fr; background: var(--card-bg); border-radius: 30px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.03); }
+        @media (max-width: 768px) { .hero-section { grid-template-columns: 1fr; } .hero-right { text-align: center; align-items: center; } }
+        .hero-left { background: linear-gradient(135deg, var(--rose), var(--serenity)); display: flex; align-items: center; justify-content: center; padding: 25px; }
+        .hero-right { padding: 25px; display: flex; flex-direction: column; justify-content: center; }
+        .tag { background: var(--rose); color: white; padding: 3px 12px; border-radius: 20px; font-weight: 900; width: fit-content; margin-bottom: 8px; font-size: 0.75rem; }
+        .hero-right h1 { font-size: 1.5rem; margin: 0; font-weight: 900; line-height: 1.2; }
+        .hero-right h1 span { color: var(--serenity); display: block; }
+        .hero-desc { font-size: 0.75rem; color: #888; font-weight: 700; margin-top: 8px; line-height: 1.5; }
+
+        /* --- 指定版 Deadline Style --- */
+        .deadline-card { background: var(--card-bg); border-radius: 15px; padding: 8px 15px; border-left: 6px solid var(--rose); text-align: center; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .deadline-label { font-size: 0.6rem; color: #999; font-weight: 900; letter-spacing: 0.5px; }
+        .deadline-date { font-size: 1.1rem; font-weight: 900; color: var(--dark); }
+        .timer-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+        .timer-box { background: var(--card-bg); border-radius: 15px; padding: 10px; text-align: center; border: 1.5px solid var(--serenity); }
+        .timer-num { font-size: 1.2rem; font-weight: 900; display: block; }
+        .timer-label { font-size: 0.6rem; color: #999; font-weight: 700; }
+
+        /* --- Player Card --- */
+        .player-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 10px 0; }
+        .player-card { background: var(--card-bg); border-radius: 20px; padding: 15px 10px; text-align: center; cursor: pointer; }
+        .avatar-box { width: 60px; height: 60px; background: #eee; border-radius: 50%; margin: 0 auto 10px; overflow: hidden; border: 2px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: center; position: relative; }
+        .avatar-box img { width: 100% !important; height: 100% !important; object-fit: cover !important; border-radius: 50%; }
+
+        /* --- Bingo Area --- */
+        #bingo-capture-zone { 
+            background: linear-gradient(135deg, var(--rose), var(--serenity)); 
+            border-radius: 30px; padding: 45px 25px; 
+            text-align: center; color: white; 
+            position: relative; overflow: hidden; 
+            transition: background 0.5s ease;
+            display: flex; flex-direction: column; align-items: center;
+        }
+        .player-subtitle { font-size: 0.55rem; font-weight: 700; letter-spacing: 1.5px; opacity: 0.8; margin-top: 4px; margin-bottom: 12px; z-index: 3; position: relative; }
+        
+        #watermark-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; }
+        .wm-style-top { position: absolute; top: 25px; left: 15px; width: 38%; opacity: 0.3; mix-blend-mode: screen; }
+        .wm-style-mid { position: absolute; top: 58%; left: 50%; transform: translate(-50%, -50%); width: 21%; opacity: 0.3; mix-blend-mode: screen; }
+        .wm-ran-top { width: 30% !important; }
+        .wm-ran-mid { width: 18% !important; top: 70% !important; } 
+        .wm-mirror { transform: translate(-50%, -50%) scaleX(-1) !important; }
+
+        .bingo-board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 100%; aspect-ratio: 1/1; margin-top: 5px; position: relative; z-index: 1; }
+        
+        .cell { 
+            background: var(--glass); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); 
+            border-radius: 18px; border: 1px solid rgba(255,255,255,0.4); 
+            position: relative; overflow: hidden; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; 
+        }
+        .cell.marked { background: rgba(255,255,255,0.6); border: 3px solid white; }
+        
+        .cell textarea, .cell-text { 
+            width: 100%; height: 100%;
+            background: transparent; border: none; 
+            font-weight: 900; color: white; outline: none; resize: none; 
+            text-align: center;
+            display: flex; align-items: center; justify-content: center; 
+            padding: 8px;
+            font-family: 'Noto Sans TC', sans-serif; 
+            font-size: 0.75rem; 
+            line-height: 1.3;
+            z-index: 3;
+            overflow: hidden;
+            word-break: break-all;
+            align-content: center;
+        }
+
+        .stamp-img { position: absolute; width: 35.3%; height: 35.3%; bottom: 5px; right: 5px; object-fit: contain; pointer-events: none; z-index: 5; transform: rotate(-5deg); }
+
+        .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 20px 0; }
+        .btn { padding: 14px; border-radius: 50px; border: none; font-weight: 900; cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; justify-content: center; text-decoration: none; }
+        .btn-rose { background: var(--rose); color: white !important; }
+        .btn-serenity { background: var(--serenity); color: white !important; }
+        .btn-white { background: white; border: 1px solid #eee; color: var(--dark) !important; width: fit-content !important; padding: 6px 15px !important; font-size: 0.75rem !important; margin-bottom: 5px; }
+
+        .bias-toggle-btn { width: 65px; height: 65px; border-radius: 50%; border: 3px solid white; background: white; cursor: pointer; overflow: hidden; margin: 10px auto; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .bias-toggle-btn img { width: 90%; height: 90%; object-fit: contain; }
+
+        /* --- Diary Modal --- */
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 2000; backdrop-filter: blur(5px); }
+        .modal-content { background: white; padding: 25px; border-radius: 25px; width: 85%; max-width: 400px; text-align: center; border: 4px solid var(--serenity); box-shadow: 0 15px 40px rgba(0,0,0,0.2); }
+        #note-title { margin: 0; font-size: 1.5rem; color: var(--serenity); font-weight: 900; }
+        #note-input { width: 100%; height: 120px; margin: 15px 0; border-radius: 15px; padding: 12px; border: 2px solid #f0f0f0; outline: none; font-family: 'Noto Sans TC', sans-serif; resize: none; text-align: center; font-size: 0.9rem; }
+
+        .rules-card { background: white; padding: 20px; border-radius: 20px; border-left: 5px solid var(--rose); margin-top: 5px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); }
+        .rules-card h2 { margin: 0 0 10px; font-size: 1rem; font-weight: 900; color: var(--dark); }
+        .rules-card ol { font-size: 0.75rem; line-height: 1.6; padding-left: 20px; margin: 0; color: #666; font-weight: 500; }
+        
+        #say-the-name { 
+            position: absolute; 
+            top: 50%; left: 50%; 
+            transform: translate(-50%, -50%) scale(0); 
+            z-index: 100; 
+            pointer-events: none; 
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #say-the-name.active { transform: translate(-50%, -50%) scale(1) rotate(-10deg); }
+        .explosion-box { background: white; color: var(--rose); font-weight: 900; font-size: 1.8rem; padding: 15px 30px; border: 6px solid var(--rose); box-shadow: 0 10px 30px rgba(0,0,0,0.2); white-space: nowrap; }
+    </style>
+</head>
+<body>
+
+    <div id="page-home" class="page active">
+        <div class="container">
+            <div class="hero-section">
+                <div class="hero-left">
+                    <div style="display:flex;">
+                        <div class="avatar-box" style="width:80px; height:80px;" id="h-box-0">💎</div>
+                        <div class="avatar-box" style="width:80px; height:80px; margin-left:-20px;" id="h-box-1">💎</div>
+                        <div class="avatar-box" style="width:80px; height:80px; margin-left:-20px;" id="h-box-2">💎</div>
+                    </div>
+                </div>
+                <div class="hero-right">
+                    <div class="tag">2026 BEST WISHES</div>
+                    <h1>CARATs 賓果！<span>豪雨鴨鴨軍眷團GOING</span></h1>
+                    <div class="hero-desc">幸福不是成就順 我們最愛夫碩順<br>우린 여러분의 부석순!Fighting 해야지!!</div>
+                </div>
+            </div>
+
+            <div class="deadline-card">
+                <div class="deadline-label">GOAL DATE</div>
+                <div class="deadline-date">2026/07/31</div>
+            </div>
+
+            <div class="timer-grid">
+                <div class="timer-box"><span class="timer-num" id="d">--</span><span class="timer-label">DAYS</span></div>
+                <div class="timer-box"><span class="timer-num" id="h">--</span><span class="timer-label">HOURS</span></div>
+                <div class="timer-box"><span class="timer-num" id="m">--</span><span class="timer-label">MINS</span></div>
+                <div class="timer-box"><span class="timer-num" id="s">--</span><span class="timer-label">SECS</span></div>
+            </div>
+
+            <div class="player-grid" id="player-list"></div>
+
+            <div class="rules-card">
+                <h2>💎 遊戲規則</h2>
+                <ol>
+                    <li>選擇玩家進入個人頁，點擊預設頭貼可自行上傳圖片。</li>
+                    <li>填寫完成後按下「隨機並鎖定」位置即固定，無法編輯。</li>
+                    <li>每完成一格目標，點擊格子即蓋章，連線成功有驚喜。</li>
+                    <li>長按每一格可記錄個人心情紀錄或執行目標進度。</li>
+                    <li>點擊 Miniteen 圖示可切換不同成員印章。</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <div id="page-bingo" class="page">
+        <div class="container">
+            <button class="btn btn-white" onclick="showHome()">← Back</button>
+            <div id="bingo-capture-zone">
+                <div id="say-the-name"><div class="explosion-box">아주 NICE!!!</div></div>
+                
+                <div id="watermark-overlay"></div>
+                
+                <div class="avatar-box" style="width:90px; height:90px; font-size:40px; z-index:5;" id="current-avatar-box" onclick="triggerUpload()">💎</div>
+                <h2 id="current-player-name" style="margin:5px 0 0; font-weight:900; font-size:1.4rem; z-index:5; position:relative;">PLAYER</h2>
+                <div class="player-subtitle">2026 CARAT BINGO CHALLENGE</div>
+                
+                <div class="bingo-board" id="bingo-grid"></div>
+            </div>
+<div class="bingo-board" id="bingo-grid">
+    <div id="say-the-name"><div class="explosion-box">Very NICE!!!!!</div></div>
+</div>
+<div id="bingo-stats-board" style="display: flex; gap: 15px; justify-content: center; margin: 15px 0; z-index: 5; position: relative; width: 100%;">
+    <div style="text-align: center; flex: 1; max-width: 100px;">
+        <div style="font-size: 0.55rem; font-weight: 900; opacity: 0.8; letter-spacing: 1px; margin-bottom: 5px; color: white;">COMPLETED</div>
+        <div style="background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); padding: 8px 0; border-radius: 12px; border: 1px solid rgba(255,255,255,0.3); font-size: 1.1rem; font-weight: 900; color: white;">
+            <span id="stat-cells">0</span><small style="font-size: 0.6rem; opacity: 0.7;"> / 9</small>
+        </div>
+    </div>
+    <div style="text-align: center; flex: 1; max-width: 100px;">
+        <div style="font-size: 0.55rem; font-weight: 900; opacity: 0.8; letter-spacing: 1px; margin-bottom: 5px; color: white;">BINGO LINES</div>
+        <div style="background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); padding: 8px 0; border-radius: 12px; border: 1px solid rgba(255,255,255,0.3); font-size: 1.1rem; font-weight: 900; color: white;">
+            <span id="stat-lines">0</span>
+        </div>
+    </div>
+</div>
+<div id="bingo-stats-board" style="display: flex; gap: 15px; justify-content: center; margin: 20px 0 10px; z-index: 5; position: relative; width: 100%;">
+    <div style="text-align: center; flex: 1; max-width: 100px;">
+        <div style="font-size: 0.55rem; font-weight: 900; opacity: 0.8; letter-spacing: 1px; margin-bottom: 5px; color: white;">COMPLETED</div>
+        <div style="background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); padding: 8px 0; border-radius: 15px; border: 1px solid rgba(255,255,255,0.3); font-size: 1.1rem; font-weight: 900; color: white;">
+            <span id="stat-cells">0</span><small style="font-size: 0.6rem; opacity: 0.7;"> / 9</small>
+        </div>
+    </div>
+    <div style="text-align: center; flex: 1; max-width: 100px;">
+        <div style="font-size: 0.55rem; font-weight: 900; opacity: 0.8; letter-spacing: 1px; margin-bottom: 5px; color: white;">BINGO LINES</div>
+        <div style="background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); padding: 8px 0; border-radius: 15px; border: 1px solid rgba(255,255,255,0.3); font-size: 1.1rem; font-weight: 900; color: white;">
+            <span id="stat-lines">0</span>
+        </div>
+    </div>
+</div>
+            <div class="controls">
+                <div style="grid-column: span 2; text-align: center;">
+                    <div class="bias-toggle-btn" onclick="nextBias()"><img id="bias-btn-img" src=""></div>
+                    <span style="font-size: 0.6rem; color: #999; font-weight: 700;">SWITCH STAMP</span>
+                </div>
+                <button id="lock-btn" class="btn btn-rose" onclick="shuffleAndLock()">🎲 隨機並鎖定</button>
+                <button id="save-btn" class="btn btn-serenity" onclick="manualSave()">💾 點我儲存</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="note-modal" class="modal">
+        <div class="modal-content">
+            <h3 id="note-title">Diary</h3>
+            <span id="note-subtitle" style="font-size:0.75rem; color:#999; margin-top:5px; display:block;"></span>
+            <textarea id="note-input" placeholder="在這裡記錄你的挑戰心情或進度..."></textarea>
+            <button class="btn btn-serenity" style="width:100%" onclick="closeNote()">儲存紀錄</button>
+        </div>
+    </div>
+
+    <input type="file" id="avatar-input" hidden accept="image/*" onchange="handleAvatarUpload(event)">
+
+    <script>
+        // 初始化 Supabase
+        const supabaseUrl = 'https://enytfqnzmravfilcqklp.supabase.co';
+        const supabaseKey = 'sb_publishable_bo69LyEdm2RolpFNEwwMQw_6dF1yHN8';
+        const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+        const localIcons = ["./順榮.png", "./知勳.png", "./dk.png", "./勝寬.png", "./淨漢.png"];
+        const players = ["金妮", "然然", "雅雯"];
+        let gameData = JSON.parse(localStorage.getItem('carat_bingo_final')) || {}; 
+        let currentPlayer = "";
+        let currentNoteIdx = -1;
+        const targetDate = new Date("2026-07-31T23:59:59").getTime();
+
+        async function init() { 
+            renderPlayers(); 
+            setInterval(updateTimer, 1000); 
+            updateHeroAvatars(); 
+            
+            // 雲端資料初始化與即時監聽
+            await loadFromCloud();
+            subscribeToChanges();
+        }
+
+        // --- Supabase 雲端同步功能開始 ---
+        async function loadFromCloud() {
+            try {
+                const { data, error } = await _supabase.from('bingo_data').select('data').eq('id', 'carat_test').single();
+                if (data && data.data) {
+                    gameData = data.data;
+                    localStorage.setItem('carat_bingo_final', JSON.stringify(gameData));
+                    updateHeroAvatars();
+                    renderPlayers();
+                    if (document.getElementById('page-bingo').classList.contains('active')) {
+                        renderGrid();
+                    }
+                }
+            } catch (error) {
+                console.error("雲端讀取失敗", error);
+            }
+        }
+
+        async function saveToCloud() {
+            try {
+                await _supabase.from('bingo_data').upsert({ id: 'carat_test', data: gameData });
+            } catch (error) {
+                console.error("雲端儲存失敗", error);
+            }
+        }
+
+        function subscribeToChanges() {
+            _supabase.channel('custom-all-channel')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'bingo_data', filter: 'id=eq.carat_test' }, (payload) => {
+                    if (payload.new && payload.new.data) {
+                        gameData = payload.new.data;
+                        localStorage.setItem('carat_bingo_final', JSON.stringify(gameData));
+                        updateHeroAvatars();
+                        renderPlayers();
+                        if (document.getElementById('page-bingo').classList.contains('active')) {
+                            renderGrid();
+                        }
+                    }
+                }).subscribe();
+        }
+        // --- Supabase 雲端同步功能結束 ---
+
+        function updateHeroAvatars() {
+            players.forEach((name, i) => {
+                const box = document.getElementById(`h-box-${i}`);
+                if(box) box.innerHTML = (gameData[name] && gameData[name].avatar) ? `<img src="${gameData[name].avatar}">` : "💎";
+            });
+        }
+
+        function renderPlayers() {
+            const list = document.getElementById('player-list');
+            list.innerHTML = "";
+            players.forEach((name) => {
+                const card = document.createElement('div');
+                card.className = "player-card";
+                const avatarHTML = (gameData[name] && gameData[name].avatar) ? `<img src="${gameData[name].avatar}">` : "💎";
+                card.innerHTML = `<div class="avatar-box">${avatarHTML}</div><span style="font-weight:900">${name}</span>`;
+                card.onclick = () => openBingo(name);
+                list.appendChild(card);
+            });
+        }
+
+        function openBingo(name) {
+            currentPlayer = name;
+            if (!gameData[name]) {
+                gameData[name] = {
+                    grid: Array(9).fill().map((_, i) => ({ text: i === 4 ? "自由格" : "", marked: i === 4, note: "" })),
+                    biasIdx: 0, locked: false, avatar: ""
+                };
+            }
+            document.getElementById('page-home').classList.remove('active');
+            document.getElementById('page-bingo').classList.add('active');
+            document.getElementById('current-player-name').innerText = name;
+            document.getElementById('current-avatar-box').innerHTML = gameData[name].avatar ? `<img src="${gameData[name].avatar}">` : "💎";
+            
+            const captureZone = document.getElementById('bingo-capture-zone');
+            const wmOverlay = document.getElementById('watermark-overlay');
+            wmOverlay.innerHTML = ""; 
+
+            let wmImg = "";
+            let isRan = (name === "然然");
+
+            if (name === "雅雯" || name === "金妮") {
+                captureZone.style.background = "linear-gradient(135deg, #273445, #296985, #93A6AE)";
+                wmImg = "./蝴蝶.png";
+            } else if (isRan) {
+                captureZone.style.background = "linear-gradient(135deg, var(--rose), var(--serenity))";
+                wmImg = "./蝴蝶結.png";
+            }
+
+            if (wmImg) {
+                const imgTop = document.createElement('img');
+                imgTop.src = wmImg; 
+                imgTop.className = isRan ? "wm-style-top wm-ran-top" : "wm-style-top";
+                wmOverlay.appendChild(imgTop);
+
+                const imgMid = document.createElement('img');
+                imgMid.src = wmImg; 
+                imgMid.className = isRan ? "wm-style-mid wm-ran-mid" : "wm-style-mid";
+                if (name === "雅雯" || name === "金妮") {
+                    imgMid.classList.add('wm-mirror'); 
+                }
+                wmOverlay.appendChild(imgMid);
+            }
+
+            updateBiasUI();
+            renderGrid();
+        }
+
+     function renderGrid() {
+            const gridContainer = document.getElementById('bingo-grid');
+            const effectLayer = document.getElementById('say-the-name');
+            gridContainer.innerHTML = "";
+            gridContainer.appendChild(effectLayer);
+
+            const data = gameData[currentPlayer];
+            document.getElementById('lock-btn').style.display = data.locked ? "none" : "block";
+            document.getElementById('save-btn').style.display = data.locked ? "none" : "block";
+
+            data.grid.forEach((item, i) => {
+                const cell = document.createElement('div');
+                cell.className = `cell ${item.marked ? 'marked' : ''}`;
+                
+                if (!data.locked) {
+                    const area = document.createElement('textarea');
+                    area.value = item.text;
+                    area.placeholder = i === 4 ? "自由格" : "輸入目標";
+                    area.oninput = (e) => { 
+                        data.grid[i].text = e.target.value; 
+                        autoSizeText(e.target);
+                    };
+                    cell.appendChild(area);
+                    setTimeout(() => autoSizeText(area), 10);
+                } else {
+                    const txt = document.createElement('div');
+                    txt.className = "cell-text";
+                    txt.innerText = item.text;
+                    cell.appendChild(txt);
+                    autoSizeText(txt);
+                    
+                    if (item.marked) {
+                        const s = document.createElement('img');
+                        s.className = "stamp-img";
+                        s.src = localIcons[data.biasIdx];
+                        cell.appendChild(s);
+                    }
+                    cell.onclick = () => toggleMark(i);
+                    let timer;
+                    cell.onmousedown = cell.ontouchstart = () => { timer = setTimeout(() => openNote(i), 600); };
+                    cell.onmouseup = cell.ontouchend = () => { clearTimeout(timer); };
+                }
+                gridContainer.appendChild(cell);
+            });
+
+            // --- 這一段就是妳要的邏輯：更新數據 ---
+            const markedCount = data.grid.filter(g => g.marked).length;
+            const bingoCount = calculateBingos(data.grid);
+            
+            // 更新九宮格下方的新英文面板
+            const cellsEl = document.getElementById('stat-cells');
+            const linesEl = document.getElementById('stat-lines');
+            if(cellsEl) cellsEl.innerText = markedCount;
+            if(linesEl) linesEl.innerText = bingoCount;
+
+            // 更新原本最下面的舊數據區塊
+            if(document.getElementById('count-marked')) document.getElementById('count-marked').innerText = markedCount;
+            if(document.getElementById('count-bingo')) document.getElementById('count-bingo').innerText = bingoCount;
+        }
+                    cell.onclick = () => toggleMark(i);
+                    
+                    let pressTimer;
+                    cell.onmousedown = cell.ontouchstart = () => {
+                        pressTimer = setTimeout(() => openNote(i), 600);
+                    };
+                    cell.onmouseup = cell.ontouchend = () => {
+                        clearTimeout(pressTimer);
+                    };
+                }
+                gridContainer.appendChild(cell);
+            });
+        }
+
+      function toggleMark(idx) {
+            const data = gameData[currentPlayer];
+            
+            // 1. 蓋章前：先記住現在有幾條連線
+            const oldBingos = calculateBingos(data.grid);
+            
+            // 2. 執行蓋章：把該格狀態反轉 (有印章變沒印章，沒印章變有印章)
+            data.grid[idx].marked = !data.grid[idx].marked;
+            
+            // 3. 蓋章後：重新計算連線數
+            const newBingos = calculateBingos(data.grid);
+            
+            // 4. 判斷是否「新達成連線」
+            if (newBingos > oldBingos) {
+                const el = document.getElementById('say-the-name');
+                
+                // 確保對話框文字是妳要的（Very NICE!!!!!）
+                const box = el.querySelector('.explosion-box');
+                if(box) box.innerText = "아주 NICE!!!!!";
+                
+                // 顯示對話框特效
+                el.classList.add('active');
+                
+                // 噴發粉藍碎紙 (Rose Quartz & Serenity)
+                confetti({
+                    particleCount: 200,
+                    spread: 90,
+                    origin: { y: 0.5 },
+                    colors: ['#F7CAC9', '#92A8D1', '#FFFFFF']
+                });
+                
+                // 2.5 秒後自動收起對話框
+                setTimeout(() => el.classList.remove('active'), 2500);
+            }
+            
+            // 5. 存檔並重新畫出網格（這會同時觸發數據更新）
+            save(); 
+            renderGrid();
+        }
+
+        function calculateBingos(grid) {
+            const lines = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+            return lines.filter(l => l.every(idx => grid[idx].marked)).length;
+        }
+
+        function openNote(idx) {
+            currentNoteIdx = idx;
+            const goalText = gameData[currentPlayer].grid[idx].text || "未設定目標";
+            document.getElementById('note-subtitle').innerText = `目標：${goalText}`;
+            document.getElementById('note-input').value = gameData[currentPlayer].grid[idx].note || "";
+            document.getElementById('note-modal').style.display = "flex";
+        }
+
+        function closeNote() {
+            gameData[currentPlayer].grid[currentNoteIdx].note = document.getElementById('note-input').value;
+            document.getElementById('note-modal').style.display = "none";
+            save();
+        }
+
+        function shuffleAndLock() {
+            if (confirm("鎖定後位置將隨機重排且無法編輯目標，確定執行？")) {
+                let data = gameData[currentPlayer];
+                let mid = data.grid[4];
+                let rest = data.grid.filter((_, i) => i !== 4);
+                rest.sort(() => Math.random() - 0.5);
+                rest.splice(4, 0, mid);
+                data.grid = rest;
+                data.locked = true;
+                save(); renderGrid();
+            }
+        }
+
+        function nextBias() {
+            gameData[currentPlayer].biasIdx = (gameData[currentPlayer].biasIdx + 1) % localIcons.length;
+            updateBiasUI(); save(); renderGrid();
+        }
+
+        function updateBiasUI() { document.getElementById('bias-btn-img').src = localIcons[gameData[currentPlayer].biasIdx]; }
+        
+        // 修正：手動與自動儲存皆同步雲端
+        function manualSave() { 
+            save(); 
+            alert("已手動儲存並同步雲端進度！💎"); 
+        }
+        function save() { 
+            localStorage.setItem('carat_bingo_final', JSON.stringify(gameData)); 
+            saveToCloud(); 
+        }
+        
+        function showHome() { 
+            document.getElementById('page-bingo').classList.remove('active'); 
+            document.getElementById('page-home').classList.add('active'); 
+            updateHeroAvatars();
+            renderPlayers(); 
+        }
+
+        function triggerUpload() { document.getElementById('avatar-input').click(); }
+        function handleAvatarUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    gameData[currentPlayer].avatar = e.target.result;
+                    document.getElementById('current-avatar-box').innerHTML = `<img src="${e.target.result}">`;
+                    save();
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function updateTimer() {
+            const diff = targetDate - new Date().getTime();
+            if (diff < 0) return;
+            document.getElementById('d').innerText = Math.floor(diff / (1000 * 60 * 60 * 24)).toString().padStart(2, '0');
+            document.getElementById('h').innerText = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)).toString().padStart(2, '0');
+            document.getElementById('m').innerText = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)).toString().padStart(2, '0');
+            document.getElementById('s').innerText = Math.floor((diff % (1000 * 60)) / 1000).toString().padStart(2, '0');
+        }
+
+        init();
+    </script>
+</body>
+</html>
