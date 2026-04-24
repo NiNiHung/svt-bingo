@@ -71,20 +71,28 @@
         }
         .cell.marked { background: rgba(255,255,255,0.6); border: 3px solid white; }
         
-        .cell textarea, .cell-text { 
+       .cell textarea, .cell-text { 
             width: 100%; height: 100%;
             background: transparent; border: none; 
             font-weight: 900; color: white; outline: none; resize: none; 
-            text-align: center;
-            display: flex; align-items: center; justify-content: center; 
-            padding: 8px;
+            
+            /* --- 關鍵修正：確保置中 --- */
+            display: flex;
+            align-items: center;      /* 垂直置中 */
+            justify-content: center;   /* 水平置中 */
+            text-align: center;       /* 文字行位置中 */
+            
+            /* 針對 Android 的 textarea 垂直置中處理 */
+            padding: 0;               /* 移除預設內距 */
+            display: grid;            /* 使用 grid 更有力 */
+            place-content: center;    /* grid 專用的全方位置中 */
+            
             font-family: 'Noto Sans TC', sans-serif; 
             font-size: 0.75rem; 
-            line-height: 1.3;
+            line-height: 1.2;
             z-index: 3;
             overflow: hidden;
             word-break: break-all;
-            align-content: center;
         }
 
         .stamp-img { position: absolute; width: 35.3%; height: 35.3%; bottom: 5px; right: 5px; object-fit: contain; pointer-events: none; z-index: 5; transform: rotate(-5deg); }
@@ -272,7 +280,8 @@
     async function init() { 
         updateTimer();
         setInterval(updateTimer, 1000); 
-        await loadFromCloud();
+        // 確保先完全讀取雲端資料後，才開始渲染畫面
+        await loadFromCloud(); 
         updateHeroAvatars(); 
         renderPlayers(); 
         subscribeToChanges();
@@ -356,7 +365,7 @@
         renderGrid();
     }
 
-    function renderGrid() {
+   function renderGrid() {
         const gridContainer = document.getElementById('bingo-grid');
         const effectLayer = document.getElementById('say-the-name');
         if (!gridContainer) return;
@@ -364,17 +373,44 @@
         if (effectLayer) gridContainer.appendChild(effectLayer);
 
         const data = gameData[currentPlayer];
+        
+        // 控制按鈕顯示
         document.getElementById('lock-btn').style.display = data.locked ? "none" : "block";
         document.getElementById('save-btn').style.display = data.locked ? "none" : "block";
+        
+        // 控制強制解鎖按鈕（配合等等在 HTML 加的 id="unlock-btn"）
+        const ub = document.getElementById('unlock-btn');
+        if(ub) ub.style.display = data.locked ? "block" : "none";
 
         data.grid.forEach((item, i) => {
             const cell = document.createElement('div');
             cell.className = `cell ${item.marked ? 'marked' : ''}`;
             if (!data.locked) {
                 const area = document.createElement('textarea');
+                if (!data.locked) {
+                const area = document.createElement('textarea');
+                
+                // --- 這裡就是修正六要加入的位置 ---
+                area.style.display = "grid";       // 讓它具備 Grid 屬性
+                area.style.placeContent = "center"; // 強制內容全位置中
+                // --------------------------------
+                
                 area.value = item.text;
                 area.placeholder = i === 4 ? "自由格" : "輸入目標";
+                area.oninput = (e) => { 
+                    data.grid[i].text = e.target.value; 
+                    autoSizeText(e.target); 
+                };
+                area.onchange = () => { save(); }; 
+                cell.appendChild(area);
+                setTimeout(() => autoSizeText(area), 10);
+            }
+                area.value = item.text;
+                area.placeholder = i === 4 ? "自由格" : "輸入目標";
+                // 修正：即時更新數據
                 area.oninput = (e) => { data.grid[i].text = e.target.value; autoSizeText(e.target); };
+                // 修正：離開或完成輸入時強制存檔
+                area.onchange = () => { save(); }; 
                 cell.appendChild(area);
                 setTimeout(() => autoSizeText(area), 10);
             } else {
@@ -397,13 +433,11 @@
             gridContainer.appendChild(cell);
         });
 
-        // 更新 Done/Bingo 數字
         const cellsEl = document.getElementById('stat-cells');
         const linesEl = document.getElementById('stat-lines');
         if(cellsEl) cellsEl.innerText = data.grid.filter(g => g.marked).length;
         if(linesEl) linesEl.innerText = calculateBingos(data.grid);
     }
-
     function autoSizeText(el) {
         if (!el) return;
         let size = 0.75;
@@ -475,7 +509,11 @@
     }
     
     function manualSave() { save(); alert("已儲存！💎"); }
-    function save() { 
+   function save() { 
+        // 強制取消輸入框焦點，確保手機輸入法內容完全寫入變數
+        if (document.activeElement && document.activeElement.tagName === 'TEXTAREA') {
+            document.activeElement.blur();
+        }
         localStorage.setItem('carat_bingo_final', JSON.stringify(gameData)); 
         saveToCloud(); 
     }
