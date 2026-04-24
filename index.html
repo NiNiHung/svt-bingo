@@ -340,22 +340,11 @@
 
         function renderGrid() {
             const gridContainer = document.getElementById('bingo-grid');
-            if (!gridContainer) return;
             gridContainer.innerHTML = "";
-            
-            // 1. 確保特效層存在
-            const effectLayer = document.getElementById('say-the-name');
-            if (effectLayer) gridContainer.appendChild(effectLayer);
-
             const data = gameData[currentPlayer];
 
-            // 2. 根據鎖定狀態顯示按鈕 (這裡控制了妳原本的鎖定邏輯)
             document.getElementById('lock-btn').style.display = data.locked ? "none" : "block";
             document.getElementById('save-btn').style.display = data.locked ? "none" : "block";
-            // 如果鎖定了，就顯示我們新加的解鎖按鈕
-            if(document.getElementById('unlock-btn')) {
-                document.getElementById('unlock-btn').style.display = data.locked ? "block" : "none";
-            }
 
             data.grid.forEach((item, i) => {
                 const cell = document.createElement('div');
@@ -379,19 +368,19 @@
                         s.src = localIcons[data.biasIdx];
                         cell.appendChild(s);
                     }
+
                     cell.onclick = () => toggleMark(i);
+                    
                     let pressTimer;
-                    cell.onmousedown = cell.ontouchstart = () => { pressTimer = setTimeout(() => openNote(i), 600); };
-                    cell.onmouseup = cell.ontouchend = () => { clearTimeout(pressTimer); };
+                    cell.onmousedown = cell.ontouchstart = () => {
+                        pressTimer = setTimeout(() => openNote(i), 600);
+                    };
+                    cell.onmouseup = cell.ontouchend = () => {
+                        clearTimeout(pressTimer);
+                    };
                 }
                 gridContainer.appendChild(cell);
             });
-
-            // 3. 更新 Done/Bingo 數據面板的數字
-            const markedCount = data.grid.filter(g => g.marked).length;
-            const bingoCount = calculateBingos(data.grid);
-            if(document.getElementById('stat-cells')) document.getElementById('stat-cells').innerText = markedCount;
-            if(document.getElementById('stat-lines')) document.getElementById('stat-lines').innerText = bingoCount;
         }
 
         function toggleMark(idx) {
