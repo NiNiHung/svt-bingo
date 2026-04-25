@@ -219,42 +219,29 @@
         let currentNoteIdx = -1;
         const targetDate = new Date("2026-07-31T23:59:59").getTime();
 
-        async function init() { 
-            renderPlayers(); 
-            setInterval(updateTimer, 1000); 
-            updateHeroAvatars(); 
-            
-            // 雲端資料初始化與即時監聽
-            await loadFromCloud();
-            subscribeToChanges();
-        }
+       async function init() { 
+    // 1. 先從本地讀取目前資料
+    const saved = localStorage.getItem('carat_bingo_final');
+    if (saved) {
+        let tempGrid = JSON.parse(saved);
+        // 如果然然或雅雯目前是鎖定的，就幫她們解開
+        if (tempGrid["然然"] && tempGrid["然然"].locked) tempGrid["然然"].locked = false;
+        if (tempGrid["雅雯"] && tempGrid["雅雯"].locked) tempGrid["雅雯"].locked = false;
+        
+        // 更新全域變數並儲存
+        gameData = tempGrid;
+        save(); 
+    }
 
-        // --- Supabase 雲端同步功能開始 ---
-        async function loadFromCloud() {
-            try {
-                const { data, error } = await _supabase.from('bingo_data').select('data').eq('id', 'carat_2026').single();
-                if (data && data.data) {
-                    gameData = data.data;
-                    localStorage.setItem('carat_bingo_final', JSON.stringify(gameData));
-                    updateHeroAvatars();
-                    renderPlayers();
-                    if (document.getElementById('page-bingo').classList.contains('active')) {
-                        renderGrid();
-                    }
-                }
-            } catch (error) {
-                console.error("雲端讀取失敗", error);
-            }
-        }
-
-        async function saveToCloud() {
-            try {
-                await _supabase.from('bingo_data').upsert({ id: 'carat_2026', data: gameData });
-            } catch (error) {
-                console.error("雲端儲存失敗", error);
-            }
-        }
-
+    // 2. 正常執行後續初始化
+    renderPlayers(); 
+    setInterval(updateTimer, 1000); 
+    updateHeroAvatars(); 
+    
+    // 3. 讀取雲端最新資料並保持同步
+    await loadFromCloud();
+    subscribeToChanges();
+}
         function subscribeToChanges() {
             _supabase.channel('custom-all-channel')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'bingo_data', filter: 'id=eq.carat_2026' }, (payload) => {
