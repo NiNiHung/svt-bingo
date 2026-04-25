@@ -212,105 +212,49 @@
         const supabaseKey = 'sb_publishable_bo69LyEdm2RolpFNEwwMQw_6dF1yHN8';
         const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
-        // ... 前面是初始化 supabase 的兩行 ...
-const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
-        // --- 💎 補回遺失的核心變數 💎 ---
+        const localIcons = ["./順榮.png", "./知勳.png", "./dk.png", "./勝寬.png", "./淨漢.png"];
         const players = ["金妮", "然然", "雅雯"];
-        // 這裡對應妳的印章圖檔
-        const localIcons = ["./虎.png", "./飯糰.png", "./橘子.png"]; 
-        // 這裡設定倒數計時的目標日期
-        const targetDate = new Date("2026-07-31T00:00:00").getTime();
-        
+        let gameData = JSON.parse(localStorage.getItem('carat_bingo_final')) || {}; 
         let currentPlayer = "";
         let currentNoteIdx = -1;
-        let gameData = {};
-        // ------------------------------
+        const targetDate = new Date("2026-07-31T23:59:59").getTime();
 
-// --- 💎 補全這兩個關鍵的雲端同步函數 💎 ---
-async function saveToCloud() {
-    try {
-        // 使用 upsert，如果 id 存在就更新，不存在就新增
-        const { error } = await _supabase
-            .from('bingo_data')
-            .upsert({ 
-                id: 'carat_2026', 
-                data: gameData, 
-                updated_at: new Date() 
-            });
-        if (error) throw error;
-        console.log("雲端同步成功！");
-    } catch (e) {
-        console.error("雲端同步失敗:", e.message);
-    }
-}
-
-async function loadFromCloud() {
-    try {
-        const { data, error } = await _supabase
-            .from('bingo_data')
-            .select('data')
-            .eq('id', 'carat_2026')
-            .single();
-
-        if (error) {
-            // 如果是因為查無資料報錯，就先存一份空的上去
-            if (error.code === 'PGRST116') {
-                await saveToCloud();
-                return;
-            }
-            throw error;
+        async function init() { 
+            renderPlayers(); 
+            setInterval(updateTimer, 1000); 
+            updateHeroAvatars(); 
+            
+            // 雲端資料初始化與即時監聽
+            await loadFromCloud();
+            subscribeToChanges();
         }
 
-        if (data && data.data) {
-            gameData = data.data;
-            localStorage.setItem('carat_bingo_final', JSON.stringify(gameData));
-            console.log("雲端資料讀取成功");
-        }
-    } catch (e) {
-        console.error("讀取雲端失敗:", e.message);
-    }
-}
-
-async function init() { 
-    // 1. 核心：這兩行控制倒數計時，一定要在最前面！
-    updateTimer(); 
-    setInterval(updateTimer, 1000); 
-
-    // 2. 處理本地資料解鎖邏輯
-    const saved = localStorage.getItem('carat_bingo_final');
-    if (saved) {
-        try {
-            let tempGrid = JSON.parse(saved);
-            let neededSave = false;
-            ["然然", "雅雯"].forEach(name => {
-                if (tempGrid[name] && tempGrid[name].locked) {
-                    tempGrid[name].locked = false;
-                    neededSave = true;
+        // --- Supabase 雲端同步功能開始 ---
+        async function loadFromCloud() {
+            try {
+                const { data, error } = await _supabase.from('bingo_data').select('data').eq('id', 'carat_2026').single();
+                if (data && data.data) {
+                    gameData = data.data;
+                    localStorage.setItem('carat_bingo_final', JSON.stringify(gameData));
+                    updateHeroAvatars();
+                    renderPlayers();
+                    if (document.getElementById('page-bingo').classList.contains('active')) {
+                        renderGrid();
+                    }
                 }
-            });
-            if (neededSave) {
-                gameData = tempGrid;
-                localStorage.setItem('carat_bingo_final', JSON.stringify(gameData));
-            } else {
-                gameData = tempGrid;
+            } catch (error) {
+                console.error("雲端讀取失敗", error);
             }
-        } catch (e) {
-            console.error("解析本地資料出錯", e);
         }
-    }
 
-    // 3. 基礎渲染
-    renderPlayers(); 
-    updateHeroAvatars(); 
-    
-    // 4. 讀取雲端同步（這是我們剛補上的）
-    try {
-        await loadFromCloud();
-        subscribeToChanges();
-    } catch (e) {
-        console.log("雲端同步中...");
-    }
-}
+        async function saveToCloud() {
+            try {
+                await _supabase.from('bingo_data').upsert({ id: 'carat_2026', data: gameData });
+            } catch (error) {
+                console.error("雲端儲存失敗", error);
+            }
+        }
+
         function subscribeToChanges() {
             _supabase.channel('custom-all-channel')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'bingo_data', filter: 'id=eq.carat_2026' }, (payload) => {
