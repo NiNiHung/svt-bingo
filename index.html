@@ -220,27 +220,48 @@
         const targetDate = new Date("2026-07-31T23:59:59").getTime();
 
        async function init() { 
-    // 1. 先從本地讀取目前資料
+    // 1. 確保定時器先跑，倒數數字才會出現
+    updateTimer();
+    setInterval(updateTimer, 1000); 
+
+    // 2. 處理一次性解鎖邏輯
     const saved = localStorage.getItem('carat_bingo_final');
     if (saved) {
-        let tempGrid = JSON.parse(saved);
-        // 如果然然或雅雯目前是鎖定的，就幫她們解開
-        if (tempGrid["然然"] && tempGrid["然然"].locked) tempGrid["然然"].locked = false;
-        if (tempGrid["雅雯"] && tempGrid["雅雯"].locked) tempGrid["雅雯"].locked = false;
-        
-        // 更新全域變數並儲存
-        gameData = tempGrid;
-        save(); 
+        try {
+            let tempGrid = JSON.parse(saved);
+            let neededSave = false;
+
+            // 檢查並解鎖
+            ["然然", "雅雯"].forEach(name => {
+                if (tempGrid[name] && tempGrid[name].locked) {
+                    tempGrid[name].locked = false;
+                    neededSave = true;
+                }
+            });
+
+            if (neededSave) {
+                gameData = tempGrid;
+                // 這裡只存本地，避免干擾雲端讀取順序
+                localStorage.setItem('carat_bingo_final', JSON.stringify(gameData));
+            } else {
+                gameData = tempGrid;
+            }
+        } catch (e) {
+            console.error("解析本地資料出錯", e);
+        }
     }
 
-    // 2. 正常執行後續初始化
+    // 3. 先進行基礎渲染（讓畫面不空白）
     renderPlayers(); 
-    setInterval(updateTimer, 1000); 
     updateHeroAvatars(); 
     
-    // 3. 讀取雲端最新資料並保持同步
-    await loadFromCloud();
-    subscribeToChanges();
+    // 4. 最後讀取雲端，覆蓋並同步最新狀態
+    try {
+        await loadFromCloud();
+        subscribeToChanges();
+    } catch (e) {
+        console.log("雲端同步中...");
+    }
 }
         function subscribeToChanges() {
             _supabase.channel('custom-all-channel')
