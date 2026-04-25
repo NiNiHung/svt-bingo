@@ -453,28 +453,42 @@ async function loadFromCloud() {
 }
 
 async function saveToCloud() {
-    try { await _supabase.from('bingo_data').upsert({ id: 'carat_2026', data: gameData }); } 
-    catch (e) { console.error("Cloud save error", e); }
+    try { 
+        const { error } = await _supabase
+            .from('bingo_data')
+            .upsert({ id: 'carat_2026', data: gameData, updated_at: new Date() }); // 加一個時間戳記強制更新
+        if (error) throw error;
+        console.log("雲端同步成功！");
+    } catch (e) { 
+        console.error("同步失敗原因:", e.message); 
+    }
 }
 
 // 替換原本的 subscribeToChanges
 function subscribeToChanges() {
     _supabase.channel('custom-all-channel')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'bingo_data' }, (p) => {
+    .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'bingo_data' 
+    }, (p) => {
+        // 只有當新資料存在，且跟我們手上的資料版本不一樣時才更新
         if (p.new && p.new.data) {
-            console.log("發現雲端更新！同步中...");
+            console.log("收到雲端廣播，更新畫面中...");
             gameData = p.new.data;
             localStorage.setItem('carat_bingo_final', JSON.stringify(gameData));
             
-            // 重新渲染畫面
-            renderPlayers();
-            updateHeroAvatars();
+            // 根據目前在哪個頁面，更新對應的 UI
             if (document.getElementById('page-bingo').classList.contains('active')) {
                 renderGrid();
                 updateBiasUI();
-                // 同步頭貼顯示
+                // 這裡最重要：更新目前玩家的頭貼
+                const currentAvatar = gameData[currentPlayer]?.avatar;
                 document.getElementById('current-avatar-box').innerHTML = 
-                    gameData[currentPlayer].avatar ? `<img src="${gameData[currentPlayer].avatar}">` : "💎";
+                    currentAvatar ? `<img src="${currentAvatar}">` : "💎";
+            } else {
+                renderPlayers();
+                updateHeroAvatars();
             }
         }
     }).subscribe();
