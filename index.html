@@ -273,10 +273,11 @@ async function init() {
     updateTimer(); 
     setInterval(updateTimer, 1000); 
     
-    updateHeroAvatars(); 
-    renderPlayers(); 
+    // 先從雲端抓取最新的資料，完成後才渲染畫面
+    await loadFromCloud(); 
     
-    await loadFromCloud();
+    renderPlayers(); // 這裡才會抓到最新的頭貼
+    updateHeroAvatars();
     subscribeToChanges();
 }
 
@@ -456,16 +457,28 @@ async function saveToCloud() {
     catch (e) { console.error("Cloud save error", e); }
 }
 
+// 替換原本的 subscribeToChanges
 function subscribeToChanges() {
-    _supabase.channel('custom-all-channel').on('postgres_changes', { event: '*', schema: 'public', table: 'bingo_data' }, (p) => {
+    _supabase.channel('custom-all-channel')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'bingo_data' }, (p) => {
         if (p.new && p.new.data) {
+            console.log("發現雲端更新！同步中...");
             gameData = p.new.data;
+            localStorage.setItem('carat_bingo_final', JSON.stringify(gameData));
+            
+            // 重新渲染畫面
             renderPlayers();
-            if (document.getElementById('page-bingo').classList.contains('active')) renderGrid();
+            updateHeroAvatars();
+            if (document.getElementById('page-bingo').classList.contains('active')) {
+                renderGrid();
+                updateBiasUI();
+                // 同步頭貼顯示
+                document.getElementById('current-avatar-box').innerHTML = 
+                    gameData[currentPlayer].avatar ? `<img src="${gameData[currentPlayer].avatar}">` : "💎";
+            }
         }
     }).subscribe();
 }
-
 // 8. 輔助小工具
 function openNote(idx) {
     currentNoteIdx = idx;
