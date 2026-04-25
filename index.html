@@ -212,12 +212,57 @@
         const supabaseKey = 'sb_publishable_bo69LyEdm2RolpFNEwwMQw_6dF1yHN8';
         const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
-        const localIcons = ["./順榮.png", "./知勳.png", "./dk.png", "./勝寬.png", "./淨漢.png"];
-        const players = ["金妮", "然然", "雅雯"];
-        let gameData = JSON.parse(localStorage.getItem('carat_bingo_final')) || {}; 
-        let currentPlayer = "";
-        let currentNoteIdx = -1;
-        const targetDate = new Date("2026-07-31T23:59:59").getTime();
+        // ... 前面是初始化 supabase 的兩行 ...
+const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+// --- 💎 補全這兩個關鍵的雲端同步函數 💎 ---
+async function saveToCloud() {
+    try {
+        // 使用 upsert，如果 id 存在就更新，不存在就新增
+        const { error } = await _supabase
+            .from('bingo_data')
+            .upsert({ 
+                id: 'carat_2026', 
+                data: gameData, 
+                updated_at: new Date() 
+            });
+        if (error) throw error;
+        console.log("雲端同步成功！");
+    } catch (e) {
+        console.error("雲端同步失敗:", e.message);
+    }
+}
+
+async function loadFromCloud() {
+    try {
+        const { data, error } = await _supabase
+            .from('bingo_data')
+            .select('data')
+            .eq('id', 'carat_2026')
+            .single();
+
+        if (error) {
+            // 如果是因為查無資料報錯，就先存一份空的上去
+            if (error.code === 'PGRST116') {
+                await saveToCloud();
+                return;
+            }
+            throw error;
+        }
+
+        if (data && data.data) {
+            gameData = data.data;
+            localStorage.setItem('carat_bingo_final', JSON.stringify(gameData));
+            console.log("雲端資料讀取成功");
+        }
+    } catch (e) {
+        console.error("讀取雲端失敗:", e.message);
+    }
+}
+
+// --- 這裡才是妳原本的 init() 開始的地方 ---
+async function init() { 
+    // ... 裡面的內容不變 ...
 
        async function init() { 
     // 1. 確保定時器先跑，倒數數字才會出現
