@@ -256,76 +256,259 @@
     <input type="file" id="avatar-input" hidden accept="image/*" onchange="handleAvatarUpload(event)">
 
     <script>
-        // 初始化 Supabase
-        const supabaseUrl = 'https://enytfqnzmravfilcqklp.supabase.co';
-        const supabaseKey = 'sb_publishable_bo69LyEdm2RolpFNEwwMQw_6dF1yHN8';
-        const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
+   // 初始化 Supabase
+const supabaseUrl = 'https://enytfqnzmravfilcqklp.supabase.co';
+const supabaseKey = 'sb_publishable_bo69LyEdm2RolpFNEwwMQw_6dF1yHN8';
+const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
-        const localIcons = ["./順榮.png", "./知勳.png", "./dk.png", "./勝寬.png", "./淨漢.png"];
-        const players = ["金妮", "然然", "雅雯"];
-        let gameData = JSON.parse(localStorage.getItem('carat_bingo_final')) || {}; 
-        let currentPlayer = "";
-        let currentNoteIdx = -1;
-        const targetDate = new Date("2026-07-31T23:59:59").getTime();
+const localIcons = ["./順榮.png", "./知勳.png", "./dk.png", "./勝寬.png", "./淨漢.png"];
+const players = ["金妮", "然然", "雅雯"];
+let gameData = JSON.parse(localStorage.getItem('carat_bingo_final')) || {}; 
+let currentPlayer = "";
+let currentNoteIdx = -1;
+const targetDate = new Date("2026-07-31T23:59:59").getTime();
 
-        async function init() { 
-            renderPlayers(); 
-            setInterval(updateTimer, 1000); 
-            updateHeroAvatars(); 
+// --- 初始化程序 ---
+async function init() { 
+    updateTimer(); // 先跑一次，避免空白
+    setInterval(updateTimer, 1000); 
+    
+    // 渲染基礎畫面
+    updateHeroAvatars(); 
+    renderPlayers(); 
+    
+    // 雲端資料初始化
+    await loadFromCloud();
+    subscribeToChanges();
+}
+
+// --- 倒數計時功能 ---
+function updateTimer() {
+    const now = new Date().getTime();
+    const diff = targetDate - now;
+
+    if (diff < 0) {
+        document.querySelectorAll('.timer-num').forEach(el => el.innerText = "00");
+        return;
+    }
+
+    const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const s = Math.floor((diff % (1000 * 60)) / 1000);
+
+    document.getElementById('d').innerText = d.toString().padStart(2, '0');
+    document.getElementById('h').innerText = h.toString().padStart(2, '0');
+    document.getElementById('m').innerText = m.toString().padStart(2, '0');
+    document.getElementById('s').innerText = s.toString().padStart(2, '0');
+}
+
+// --- 渲染玩家清單 ---
+function renderPlayers() {
+    const list = document.getElementById('player-list');
+    if (!list) return;
+    list.innerHTML = "";
+    players.forEach((name) => {
+        const card = document.createElement('div');
+        card.className = "player-card";
+        const avatarHTML = (gameData[name] && gameData[name].avatar) ? `<img src="${gameData[name].avatar}">` : "💎";
+        card.innerHTML = `<div class="avatar-box">${avatarHTML}</div><span style="font-weight:900">${name}</span>`;
+        card.onclick = () => openBingo(name);
+        list.appendChild(card);
+    });
+}
+
+// --- 賓果頁面渲染 ---
+function renderGrid() {
+    const gridContainer = document.getElementById('bingo-grid');
+    if (!gridContainer) return;
+    gridContainer.innerHTML = "";
+    const data = gameData[currentPlayer];
+
+    // 處理控制按鈕
+    document.getElementById('lock-btn').style.display = data.locked ? "none" : "block";
+    document.getElementById('save-btn').style.display = data.locked ? "none" : "block";
+
+    data.grid.forEach((item, i) => {
+        const cell = document.createElement('div');
+        cell.className = `cell ${item.marked ? 'marked' : ''}`;
+        
+        if (!data.locked) {
+            const area = document.createElement('textarea');
+            area.value = item.text;
+            area.placeholder = i === 4 ? "自由格" : "輸入目標";
+            area.oninput = (e) => { data.grid[i].text = e.target.value; };
+            cell.appendChild(area);
+        } else {
+            const txt = document.createElement('div');
+            txt.className = "cell-text";
+            txt.innerText = item.text;
+            cell.appendChild(txt);
             
-            // 雲端資料初始化與即時監聽
-            await loadFromCloud();
-            subscribeToChanges();
-        }
-
-        // --- Supabase 雲端同步功能開始 ---
-        async function loadFromCloud() {
-            try {
-                const { data, error } = await _supabase.from('bingo_data').select('data').eq('id', 'carat_2026').single();
-                if (data && data.data) {
-                    gameData = data.data;
-                    localStorage.setItem('carat_bingo_final', JSON.stringify(gameData));
-                    updateHeroAvatars();
-                    renderPlayers();
-                    if (document.getElementById('page-bingo').classList.contains('active')) {
-                        renderGrid();
-                    }
-                }
-            } catch (error) {
-                console.error("雲端讀取失敗", error);
+            if (item.marked) {
+                const s = document.createElement('img');
+                s.className = "stamp-img";
+                s.src = localIcons[data.biasIdx];
+                cell.appendChild(s);
             }
+            cell.onclick = () => toggleMark(i);
+            
+            let pressTimer;
+            cell.onmousedown = cell.ontouchstart = () => {
+                pressTimer = setTimeout(() => openNote(i), 600);
+            };
+            cell.onmouseup = cell.ontouchend = () => {
+                clearTimeout(pressTimer);
+            };
         }
+        gridContainer.appendChild(cell);
+    });
 
-        async function saveToCloud() {
-            try {
-                await _supabase.from('bingo_data').upsert({ id: 'carat_2026', data: gameData });
-            } catch (error) {
-                console.error("雲端儲存失敗", error);
-            }
-        }
+    // 更新數據面板
+    const cellsEl = document.getElementById('stat-cells');
+    const linesEl = document.getElementById('stat-lines');
+    if (cellsEl) cellsEl.innerText = data.grid.filter(g => g.marked).length;
+    if (linesEl) linesEl.innerText = calculateBingos(data.grid);
+}
 
-        function subscribeToChanges() {
-            _supabase.channel('custom-all-channel')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'bingo_data', filter: 'id=eq.carat_2026' }, (payload) => {
-                    if (payload.new && payload.new.data) {
-                        gameData = payload.new.data;
-                        localStorage.setItem('carat_bingo_final', JSON.stringify(gameData));
-                        updateHeroAvatars();
-                        renderPlayers();
-                        if (document.getElementById('page-bingo').classList.contains('active')) {
-                            renderGrid();
-                        }
-                    }
-                }).subscribe();
-        }
-        // --- Supabase 雲端同步功能結束 ---
+// --- 工具函式 ---
+function calculateBingos(grid) {
+    const lines = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+    return lines.filter(l => l.every(idx => grid[idx].marked)).length;
+}
 
-        function updateHeroAvatars() {
-            players.forEach((name, i) => {
-                const box = document.getElementById(`h-box-${i}`);
-                if(box) box.innerHTML = (gameData[name] && gameData[name].avatar) ? `<img src="${gameData[name].avatar}">` : "💎";
-            });
+function toggleMark(idx) {
+    const data = gameData[currentPlayer];
+    const oldBingos = calculateBingos(data.grid);
+    data.grid[idx].marked = !data.grid[idx].marked;
+    const newBingos = calculateBingos(data.grid);
+    
+    if (newBingos > oldBingos) {
+        const el = document.getElementById('say-the-name');
+        el.classList.add('active');
+        confetti({particleCount: 150, spread: 80, origin: { y: 0.5 }});
+        setTimeout(() => el.classList.remove('active'), 2000);
+    }
+    save(); 
+    renderGrid();
+}
+
+// --- 頁面跳轉與存檔 ---
+function openBingo(name) {
+    currentPlayer = name;
+    if (!gameData[name]) {
+        gameData[name] = {
+            grid: Array(9).fill().map((_, i) => ({ text: i === 4 ? "自由格" : "", marked: i === 4, note: "" })),
+            biasIdx: 0, locked: false, avatar: ""
+        };
+    }
+    document.getElementById('page-home').classList.remove('active');
+    document.getElementById('page-bingo').classList.add('active');
+    document.getElementById('current-player-name').innerText = name;
+    document.getElementById('current-avatar-box').innerHTML = gameData[name].avatar ? `<img src="${gameData[name].avatar}">` : "💎";
+    
+    // 背景浮水印處理
+    const captureZone = document.getElementById('bingo-capture-zone');
+    const wmOverlay = document.getElementById('watermark-overlay');
+    wmOverlay.innerHTML = ""; 
+    let wmImg = (name === "然然") ? "./蝴蝶結.png" : "./蝴蝶.png";
+    captureZone.style.background = (name === "然然") ? "linear-gradient(135deg, var(--rose), var(--serenity))" : "linear-gradient(135deg, #273445, #296985, #93A6AE)";
+    
+    const imgTop = document.createElement('img');
+    imgTop.src = wmImg; imgTop.className = (name === "然然") ? "wm-style-top wm-ran-top" : "wm-style-top";
+    wmOverlay.appendChild(imgTop);
+
+    updateBiasUI();
+    renderGrid();
+}
+
+function showHome() { 
+    document.getElementById('page-bingo').classList.remove('active'); 
+    document.getElementById('page-home').classList.add('active'); 
+    updateHeroAvatars();
+    renderPlayers(); 
+}
+
+function save() { 
+    localStorage.setItem('carat_bingo_final', JSON.stringify(gameData)); 
+    saveToCloud(); 
+}
+
+// --- Supabase 同步邏輯 ---
+async function loadFromCloud() {
+    try {
+        const { data } = await _supabase.from('bingo_data').select('data').eq('id', 'carat_2026').single();
+        if (data && data.data) {
+            gameData = data.data;
+            localStorage.setItem('carat_bingo_final', JSON.stringify(gameData));
+            updateHeroAvatars(); renderPlayers();
         }
+    } catch (e) { console.error("Cloud load error", e); }
+}
+
+async function saveToCloud() {
+    try { await _supabase.from('bingo_data').upsert({ id: 'carat_2026', data: gameData }); } 
+    catch (e) { console.error("Cloud save error", e); }
+}
+
+function subscribeToChanges() {
+    _supabase.channel('custom-all-channel').on('postgres_changes', { event: '*', schema: 'public', table: 'bingo_data' }, (p) => {
+        if (p.new && p.new.data) {
+            gameData = p.new.data;
+            renderPlayers();
+            if (document.getElementById('page-bingo').classList.contains('active')) renderGrid();
+        }
+    }).subscribe();
+}
+
+// --- 其他輔助功能 (日記、頭貼、隨機) ---
+function openNote(idx) {
+    currentNoteIdx = idx;
+    document.getElementById('note-subtitle').innerText = `目標：${gameData[currentPlayer].grid[idx].text || "未設定"}`;
+    document.getElementById('note-input').value = gameData[currentPlayer].grid[idx].note || "";
+    document.getElementById('note-modal').style.display = "flex";
+}
+function closeNote() {
+    gameData[currentPlayer].grid[currentNoteIdx].note = document.getElementById('note-input').value;
+    document.getElementById('note-modal').style.display = "none";
+    save();
+}
+function shuffleAndLock() {
+    if (confirm("鎖定後位置將隨機重排且無法編輯目標，確定執行？")) {
+        let data = gameData[currentPlayer];
+        let mid = data.grid[4];
+        let rest = data.grid.filter((_, i) => i !== 4);
+        rest.sort(() => Math.random() - 0.5);
+        rest.splice(4, 0, mid);
+        data.grid = rest; data.locked = true;
+        save(); renderGrid();
+    }
+}
+function nextBias() {
+    gameData[currentPlayer].biasIdx = (gameData[currentPlayer].biasIdx + 1) % localIcons.length;
+    updateBiasUI(); save(); renderGrid();
+}
+function updateBiasUI() { document.getElementById('bias-btn-img').src = localIcons[gameData[currentPlayer].biasIdx]; }
+function manualSave() { save(); alert("同步成功！💎"); }
+function triggerUpload() { document.getElementById('avatar-input').click(); }
+function handleAvatarUpload(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            gameData[currentPlayer].avatar = ev.target.result;
+            document.getElementById('current-avatar-box').innerHTML = `<img src="${ev.target.result}">`;
+            save();
+        };
+        reader.readAsDataURL(file);
+    }
+}
+function updateHeroAvatars() {
+    players.forEach((name, i) => {
+        const box = document.getElementById(`h-box-${i}`);
+        if(box) box.innerHTML = (gameData[name] && gameData[name].avatar) ? `<img src="${gameData[name].avatar}">` : "💎";
+    });
+}
 
         function renderPlayers() {
             const list = document.getElementById('player-list');
