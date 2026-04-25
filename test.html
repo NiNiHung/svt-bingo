@@ -470,84 +470,69 @@ if (wmImg) {
         updateBiasUI();
         renderGrid();
     }
- function renderGrid() {
-        const gridContainer = document.getElementById('bingo-grid');
-        if (!gridContainer) return;
-        
-        // 1. 清空容器，但要把浮水印和特效層「抓回來」放進去
-        gridContainer.innerHTML = "";
-        const effectLayer = document.getElementById('say-the-name');
-        const wmOverlay = document.getElementById('watermark-overlay');
-        if (effectLayer) gridContainer.appendChild(effectLayer);
-        if (wmOverlay) gridContainer.appendChild(wmOverlay); // 修正：把浮水印加回來
+function renderGrid() {
+    const gridContainer = document.getElementById('bingo-grid');
+    if (!gridContainer) return;
+    
+    // 1. 先清空容器
+    gridContainer.innerHTML = "";
 
-        const data = gameData[currentPlayer];
-        
-        // 控制按鈕顯示
-        document.getElementById('lock-btn').style.display = data.locked ? "none" : "block";
-        document.getElementById('save-btn').style.display = data.locked ? "none" : "block";
-        const ub = document.getElementById('unlock-btn');
-        if(ub) ub.style.display = data.locked ? "block" : "none";
+    const data = gameData[currentPlayer];
+    
+    // 2. 控制按鈕顯示 (鎖定後隱藏隨機按鈕)
+    document.getElementById('lock-btn').style.display = data.locked ? "none" : "block";
+    document.getElementById('save-btn').style.display = data.locked ? "none" : "block";
 
-        data.grid.forEach((item, i) => {
-            const cell = document.createElement('div');
-            cell.className = `cell ${item.marked ? 'marked' : ''}`;
+    // 3. 生成 9 個格子
+    data.grid.forEach((item, i) => {
+        const cell = document.createElement('div');
+        cell.className = `cell ${item.marked ? 'marked' : ''}`;
+        
+        if (!data.locked) {
+            // 編輯模式：顯示文字輸入框
+            const area = document.createElement('textarea');
+            area.value = item.text;
+            area.placeholder = i === 4 ? "自由格" : "輸入目標";
+            area.oninput = (e) => { data.grid[i].text = e.target.value; autoSizeText(e.target); };
+            area.onchange = () => { save(); }; 
+            cell.appendChild(area);
+            setTimeout(() => autoSizeText(area), 10);
+        } else {
+            // 鎖定模式：顯示純文字與印章
+            const txt = document.createElement('div');
+            txt.className = "cell-text";
+            txt.innerText = item.text;
+            cell.appendChild(txt);
             
-            if (!data.locked) {
-                // --- 編輯模式 ---
-                const area = document.createElement('textarea');
-                area.style.display = "grid";       
-                area.style.placeContent = "center";
-                area.value = item.text;
-                area.placeholder = i === 4 ? "自由格" : "輸入目標";
-                area.oninput = (e) => { data.grid[i].text = e.target.value; autoSizeText(e.target); };
-                area.onchange = () => { save(); }; 
-                cell.appendChild(area);
-                setTimeout(() => autoSizeText(area), 10);
-            } else {
-                // --- 鎖定模式 (修正：確保只顯示一次文字) ---
-                const txt = document.createElement('div');
-                txt.className = "cell-text";
-                txt.innerText = item.text;
-                cell.appendChild(txt);
-                
-                // 只有鎖定後才顯示印章
-                if (item.marked) {
-                    const s = document.createElement('img');
-                    s.className = "stamp-img";
-                    s.src = localIcons[data.biasIdx];
-                    cell.appendChild(s);
-                }
-                
-                // 綁定點擊事件
-                cell.onclick = () => toggleMark(i);
-                let timer;
-                cell.onmousedown = cell.ontouchstart = () => { timer = setTimeout(() => openNote(i), 600); };
-                cell.onmouseup = cell.ontouchend = () => { clearTimeout(timer); };
-                
-                setTimeout(() => autoSizeText(txt), 10);
+            if (item.marked) {
+                const s = document.createElement('img');
+                s.className = "stamp-img";
+                s.src = localIcons[data.biasIdx];
+                cell.appendChild(s);
             }
-            gridContainer.appendChild(cell);
-        });
-
-        // 更新數據
-        const cellsEl = document.getElementById('stat-cells');
-        const linesEl = document.getElementById('stat-lines');
-        if(cellsEl) cellsEl.innerText = data.grid.filter(g => g.marked).length;
-        if(linesEl) linesEl.innerText = calculateBingos(data.grid);
-    }
-    function autoSizeText(el) {
-        if (!el) return;
-        let size = 0.75;
-        el.style.fontSize = size + "rem";
-        if (el.tagName === 'TEXTAREA') {
-            while (el.scrollHeight > el.offsetHeight && size > 0.4) {
-                size -= 0.05;
-                el.style.fontSize = size + "rem";
-            }
+            
+            cell.onclick = () => toggleMark(i);
+            let timer;
+            cell.onmousedown = cell.ontouchstart = () => { timer = setTimeout(() => openNote(i), 600); };
+            cell.onmouseup = cell.ontouchend = () => { clearTimeout(timer); };
+            setTimeout(() => autoSizeText(txt), 10);
         }
-    }
+        gridContainer.appendChild(cell);
+    });
 
+    // 4. 【最重要的步驟】最後才疊加上層：浮水印與特效
+    // 這樣浮水印才會像截圖那樣，飄在格子的框框上面！
+    const effectLayer = document.getElementById('say-the-name');
+    const wmOverlay = document.getElementById('watermark-overlay');
+    if (effectLayer) gridContainer.appendChild(effectLayer);
+    if (wmOverlay) gridContainer.appendChild(wmOverlay); 
+
+    // 5. 更新數據面板
+    const cellsEl = document.getElementById('stat-cells');
+    const linesEl = document.getElementById('stat-lines');
+    if(cellsEl) cellsEl.innerText = data.grid.filter(g => g.marked).length;
+    if(linesEl) linesEl.innerText = calculateBingos(data.grid);
+}
     function toggleMark(idx) {
         const data = gameData[currentPlayer];
         const oldBingos = calculateBingos(data.grid);
