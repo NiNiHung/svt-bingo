@@ -260,33 +260,25 @@ async function loadFromCloud() {
     }
 }
 
-// --- 這裡才是妳原本的 init() 開始的地方 ---
 async function init() { 
-    // ... 裡面的內容不變 ...
-
-       async function init() { 
-    // 1. 確保定時器先跑，倒數數字才會出現
-    updateTimer();
+    // 1. 核心：這兩行控制倒數計時，一定要在最前面！
+    updateTimer(); 
     setInterval(updateTimer, 1000); 
 
-    // 2. 處理一次性解鎖邏輯
+    // 2. 處理本地資料解鎖邏輯
     const saved = localStorage.getItem('carat_bingo_final');
     if (saved) {
         try {
             let tempGrid = JSON.parse(saved);
             let neededSave = false;
-
-            // 檢查並解鎖
             ["然然", "雅雯"].forEach(name => {
                 if (tempGrid[name] && tempGrid[name].locked) {
                     tempGrid[name].locked = false;
                     neededSave = true;
                 }
             });
-
             if (neededSave) {
                 gameData = tempGrid;
-                // 這裡只存本地，避免干擾雲端讀取順序
                 localStorage.setItem('carat_bingo_final', JSON.stringify(gameData));
             } else {
                 gameData = tempGrid;
@@ -296,11 +288,11 @@ async function init() {
         }
     }
 
-    // 3. 先進行基礎渲染（讓畫面不空白）
+    // 3. 基礎渲染
     renderPlayers(); 
     updateHeroAvatars(); 
     
-    // 4. 最後讀取雲端，覆蓋並同步最新狀態
+    // 4. 讀取雲端同步（這是我們剛補上的）
     try {
         await loadFromCloud();
         subscribeToChanges();
