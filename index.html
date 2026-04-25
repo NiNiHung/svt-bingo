@@ -255,8 +255,8 @@
 
     <input type="file" id="avatar-input" hidden accept="image/*" onchange="handleAvatarUpload(event)">
 
-    <script>
-   // 初始化 Supabase
+   <script>
+// 1. 基礎設定與變數
 const supabaseUrl = 'https://enytfqnzmravfilcqklp.supabase.co';
 const supabaseKey = 'sb_publishable_bo69LyEdm2RolpFNEwwMQw_6dF1yHN8';
 const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
@@ -268,21 +268,19 @@ let currentPlayer = "";
 let currentNoteIdx = -1;
 const targetDate = new Date("2026-07-31T23:59:59").getTime();
 
-// --- 初始化程序 ---
+// 2. 初始化啟動器
 async function init() { 
-    updateTimer(); // 先跑一次，避免空白
+    updateTimer(); 
     setInterval(updateTimer, 1000); 
     
-    // 渲染基礎畫面
     updateHeroAvatars(); 
     renderPlayers(); 
     
-    // 雲端資料初始化
     await loadFromCloud();
     subscribeToChanges();
 }
 
-// --- 倒數計時功能 ---
+// 3. 計時器邏輯
 function updateTimer() {
     const now = new Date().getTime();
     const diff = targetDate - now;
@@ -297,13 +295,18 @@ function updateTimer() {
     const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
     const s = Math.floor((diff % (1000 * 60)) / 1000);
 
-    document.getElementById('d').innerText = d.toString().padStart(2, '0');
-    document.getElementById('h').innerText = h.toString().padStart(2, '0');
-    document.getElementById('m').innerText = m.toString().padStart(2, '0');
-    document.getElementById('s').innerText = s.toString().padStart(2, '0');
+    const dEl = document.getElementById('d');
+    const hEl = document.getElementById('h');
+    const mEl = document.getElementById('m');
+    const sEl = document.getElementById('s');
+
+    if (dEl) dEl.innerText = d.toString().padStart(2, '0');
+    if (hEl) hEl.innerText = h.toString().padStart(2, '0');
+    if (mEl) mEl.innerText = m.toString().padStart(2, '0');
+    if (sEl) sEl.innerText = s.toString().padStart(2, '0');
 }
 
-// --- 渲染玩家清單 ---
+// 4. 玩家清單渲染
 function renderPlayers() {
     const list = document.getElementById('player-list');
     if (!list) return;
@@ -318,14 +321,13 @@ function renderPlayers() {
     });
 }
 
-// --- 賓果頁面渲染 ---
+// 5. 賓果格子渲染
 function renderGrid() {
     const gridContainer = document.getElementById('bingo-grid');
     if (!gridContainer) return;
     gridContainer.innerHTML = "";
     const data = gameData[currentPlayer];
 
-    // 處理控制按鈕
     document.getElementById('lock-btn').style.display = data.locked ? "none" : "block";
     document.getElementById('save-btn').style.display = data.locked ? "none" : "block";
 
@@ -364,14 +366,13 @@ function renderGrid() {
         gridContainer.appendChild(cell);
     });
 
-    // 更新數據面板
     const cellsEl = document.getElementById('stat-cells');
     const linesEl = document.getElementById('stat-lines');
     if (cellsEl) cellsEl.innerText = data.grid.filter(g => g.marked).length;
     if (linesEl) linesEl.innerText = calculateBingos(data.grid);
 }
 
-// --- 工具函式 ---
+// 6. 核心功能 (存檔、標記、隨機)
 function calculateBingos(grid) {
     const lines = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
     return lines.filter(l => l.every(idx => grid[idx].marked)).length;
@@ -389,11 +390,9 @@ function toggleMark(idx) {
         confetti({particleCount: 150, spread: 80, origin: { y: 0.5 }});
         setTimeout(() => el.classList.remove('active'), 2000);
     }
-    save(); 
-    renderGrid();
+    save(); renderGrid();
 }
 
-// --- 頁面跳轉與存檔 ---
 function openBingo(name) {
     currentPlayer = name;
     if (!gameData[name]) {
@@ -407,16 +406,23 @@ function openBingo(name) {
     document.getElementById('current-player-name').innerText = name;
     document.getElementById('current-avatar-box').innerHTML = gameData[name].avatar ? `<img src="${gameData[name].avatar}">` : "💎";
     
-    // 背景浮水印處理
     const captureZone = document.getElementById('bingo-capture-zone');
     const wmOverlay = document.getElementById('watermark-overlay');
     wmOverlay.innerHTML = ""; 
-    let wmImg = (name === "然然") ? "./蝴蝶結.png" : "./蝴蝶.png";
-    captureZone.style.background = (name === "然然") ? "linear-gradient(135deg, var(--rose), var(--serenity))" : "linear-gradient(135deg, #273445, #296985, #93A6AE)";
+    
+    let isRan = (name === "然然");
+    let wmImg = isRan ? "./蝴蝶結.png" : "./蝴蝶.png";
+    
+    captureZone.style.background = isRan ? "linear-gradient(135deg, var(--rose), var(--serenity))" : "linear-gradient(135deg, #273445, #296985, #93A6AE)";
     
     const imgTop = document.createElement('img');
-    imgTop.src = wmImg; imgTop.className = (name === "然然") ? "wm-style-top wm-ran-top" : "wm-style-top";
+    imgTop.src = wmImg; imgTop.className = isRan ? "wm-style-top wm-ran-top" : "wm-style-top";
     wmOverlay.appendChild(imgTop);
+
+    const imgMid = document.createElement('img');
+    imgMid.src = wmImg; imgMid.className = isRan ? "wm-style-mid wm-ran-mid" : "wm-style-mid";
+    if (!isRan) imgMid.classList.add('wm-mirror');
+    wmOverlay.appendChild(imgMid);
 
     updateBiasUI();
     renderGrid();
@@ -426,7 +432,6 @@ function showHome() {
     document.getElementById('page-bingo').classList.remove('active'); 
     document.getElementById('page-home').classList.add('active'); 
     updateHeroAvatars();
-    renderPlayers(); 
 }
 
 function save() { 
@@ -434,7 +439,7 @@ function save() {
     saveToCloud(); 
 }
 
-// --- Supabase 同步邏輯 ---
+// 7. 雲端同步
 async function loadFromCloud() {
     try {
         const { data } = await _supabase.from('bingo_data').select('data').eq('id', 'carat_2026').single();
@@ -443,7 +448,7 @@ async function loadFromCloud() {
             localStorage.setItem('carat_bingo_final', JSON.stringify(gameData));
             updateHeroAvatars(); renderPlayers();
         }
-    } catch (e) { console.error("Cloud load error", e); }
+    } catch (e) { console.error("Cloud error", e); }
 }
 
 async function saveToCloud() {
@@ -461,10 +466,11 @@ function subscribeToChanges() {
     }).subscribe();
 }
 
-// --- 其他輔助功能 (日記、頭貼、隨機) ---
+// 8. 輔助小工具
 function openNote(idx) {
     currentNoteIdx = idx;
-    document.getElementById('note-subtitle').innerText = `目標：${gameData[currentPlayer].grid[idx].text || "未設定"}`;
+    const goalText = gameData[currentPlayer].grid[idx].text || "未設定目標";
+    document.getElementById('note-subtitle').innerText = `目標：${goalText}`;
     document.getElementById('note-input').value = gameData[currentPlayer].grid[idx].note || "";
     document.getElementById('note-modal').style.display = "flex";
 }
@@ -488,8 +494,11 @@ function nextBias() {
     gameData[currentPlayer].biasIdx = (gameData[currentPlayer].biasIdx + 1) % localIcons.length;
     updateBiasUI(); save(); renderGrid();
 }
-function updateBiasUI() { document.getElementById('bias-btn-img').src = localIcons[gameData[currentPlayer].biasIdx]; }
-function manualSave() { save(); alert("同步成功！💎"); }
+function updateBiasUI() { 
+    const img = document.getElementById('bias-btn-img');
+    if(img) img.src = localIcons[gameData[currentPlayer].biasIdx]; 
+}
+function manualSave() { save(); alert("已同步雲端！💎"); }
 function triggerUpload() { document.getElementById('avatar-input').click(); }
 function handleAvatarUpload(e) {
     const file = e.target.files[0];
@@ -510,232 +519,8 @@ function updateHeroAvatars() {
     });
 }
 
-        function renderPlayers() {
-            const list = document.getElementById('player-list');
-            list.innerHTML = "";
-            players.forEach((name) => {
-                const card = document.createElement('div');
-                card.className = "player-card";
-                const avatarHTML = (gameData[name] && gameData[name].avatar) ? `<img src="${gameData[name].avatar}">` : "💎";
-                card.innerHTML = `<div class="avatar-box">${avatarHTML}</div><span style="font-weight:900">${name}</span>`;
-                card.onclick = () => openBingo(name);
-                list.appendChild(card);
-            });
-        }
-
-        function openBingo(name) {
-            currentPlayer = name;
-            if (!gameData[name]) {
-                gameData[name] = {
-                    grid: Array(9).fill().map((_, i) => ({ text: i === 4 ? "自由格" : "", marked: i === 4, note: "" })),
-                    biasIdx: 0, locked: false, avatar: ""
-                };
-            }
-            document.getElementById('page-home').classList.remove('active');
-            document.getElementById('page-bingo').classList.add('active');
-            document.getElementById('current-player-name').innerText = name;
-            document.getElementById('current-avatar-box').innerHTML = gameData[name].avatar ? `<img src="${gameData[name].avatar}">` : "💎";
-            
-            const captureZone = document.getElementById('bingo-capture-zone');
-            const wmOverlay = document.getElementById('watermark-overlay');
-            wmOverlay.innerHTML = ""; 
-
-            let wmImg = "";
-            let isRan = (name === "然然");
-
-            if (name === "雅雯" || name === "金妮") {
-                captureZone.style.background = "linear-gradient(135deg, #273445, #296985, #93A6AE)";
-                wmImg = "./蝴蝶.png";
-            } else if (isRan) {
-                captureZone.style.background = "linear-gradient(135deg, var(--rose), var(--serenity))";
-                wmImg = "./蝴蝶結.png";
-            }
-
-            if (wmImg) {
-                const imgTop = document.createElement('img');
-                imgTop.src = wmImg; 
-                imgTop.className = isRan ? "wm-style-top wm-ran-top" : "wm-style-top";
-                wmOverlay.appendChild(imgTop);
-
-                const imgMid = document.createElement('img');
-                imgMid.src = wmImg; 
-                imgMid.className = isRan ? "wm-style-mid wm-ran-mid" : "wm-style-mid";
-                if (name === "雅雯" || name === "金妮") {
-                    imgMid.classList.add('wm-mirror'); 
-                }
-                wmOverlay.appendChild(imgMid);
-            }
-
-            updateBiasUI();
-            renderGrid();
-        }
-
-       function renderGrid() {
-    const gridContainer = document.getElementById('bingo-grid');
-    gridContainer.innerHTML = "";
-    const data = gameData[currentPlayer];
-
-    // 1. 處理控制按鈕顯示狀態
-    document.getElementById('lock-btn').style.display = data.locked ? "none" : "block";
-    document.getElementById('save-btn').style.display = data.locked ? "none" : "block";
-
-    // 2. 渲染格子
-    data.grid.forEach((item, i) => {
-        const cell = document.createElement('div');
-        cell.className = `cell ${item.marked ? 'marked' : ''}`;
-        
-        if (!data.locked) {
-            const area = document.createElement('textarea');
-            area.value = item.text;
-            area.placeholder = i === 4 ? "自由格" : "輸入目標";
-            area.oninput = (e) => { data.grid[i].text = e.target.value; };
-            cell.appendChild(area);
-        } else {
-            const txt = document.createElement('div');
-            txt.className = "cell-text";
-            txt.innerText = item.text;
-            cell.appendChild(txt);
-            
-            if (item.marked) {
-                const s = document.createElement('img');
-                s.className = "stamp-img";
-                s.src = localIcons[data.biasIdx];
-                cell.appendChild(s);
-            }
-
-            cell.onclick = () => toggleMark(i);
-            
-            let pressTimer;
-            cell.onmousedown = cell.ontouchstart = () => {
-                pressTimer = setTimeout(() => openNote(i), 600);
-            };
-            cell.onmouseup = cell.ontouchend = () => {
-                clearTimeout(pressTimer);
-            };
-        }
-        gridContainer.appendChild(cell);
-    });
-
-    // 3. 更新統計數據 (必須放在 forEach 迴圈之外)
-    const cellsEl = document.getElementById('stat-cells');
-    const linesEl = document.getElementById('stat-lines');
-
-    if (cellsEl) {
-        cellsEl.innerText = data.grid.filter(g => g.marked).length;
-    }
-    if (linesEl) {
-        linesEl.innerText = calculateBingos(data.grid);
-    }
-}
-
-// 統一的連線計算函式 (刪除原本代碼中重複的這段)
-function calculateBingos(grid) {
-    const lines = [
-        [0, 1, 2], [3, 4, 5], [6, 7, 8], // 橫
-        [0, 3, 6], [1, 4, 7], [2, 5, 8], // 縱
-        [0, 4, 8], [2, 4, 6]             // 斜
-    ];
-    return lines.filter(l => l.every(idx => grid[idx].marked)).length;
-}
-// ... 接下來是下一個功能 ...
-    
-        }
-
-        function toggleMark(idx) {
-            const data = gameData[currentPlayer];
-            const oldBingos = calculateBingos(data.grid);
-            data.grid[idx].marked = !data.grid[idx].marked;
-            const newBingos = calculateBingos(data.grid);
-            
-            if (newBingos > oldBingos) {
-                const el = document.getElementById('say-the-name');
-                el.classList.add('active');
-                confetti({particleCount: 150, spread: 80, origin: { y: 0.5 }});
-                setTimeout(() => el.classList.remove('active'), 2000);
-            }
-            save(); renderGrid();
-        }
-
-        function calculateBingos(grid) {
-            const lines = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
-            return lines.filter(l => l.every(idx => grid[idx].marked)).length;
-        }
-
-        function openNote(idx) {
-            currentNoteIdx = idx;
-            const goalText = gameData[currentPlayer].grid[idx].text || "未設定目標";
-            document.getElementById('note-subtitle').innerText = `目標：${goalText}`;
-            document.getElementById('note-input').value = gameData[currentPlayer].grid[idx].note || "";
-            document.getElementById('note-modal').style.display = "flex";
-        }
-
-        function closeNote() {
-            gameData[currentPlayer].grid[currentNoteIdx].note = document.getElementById('note-input').value;
-            document.getElementById('note-modal').style.display = "none";
-            save();
-        }
-
-        function shuffleAndLock() {
-            if (confirm("鎖定後位置將隨機重排且無法編輯目標，確定執行？")) {
-                let data = gameData[currentPlayer];
-                let mid = data.grid[4];
-                let rest = data.grid.filter((_, i) => i !== 4);
-                rest.sort(() => Math.random() - 0.5);
-                rest.splice(4, 0, mid);
-                data.grid = rest;
-                data.locked = true;
-                save(); renderGrid();
-            }
-        }
-
-        function nextBias() {
-            gameData[currentPlayer].biasIdx = (gameData[currentPlayer].biasIdx + 1) % localIcons.length;
-            updateBiasUI(); save(); renderGrid();
-        }
-
-        function updateBiasUI() { document.getElementById('bias-btn-img').src = localIcons[gameData[currentPlayer].biasIdx]; }
-        
-        // 修正：手動與自動儲存皆同步雲端
-        function manualSave() { 
-            save(); 
-            alert("已手動儲存並同步雲端進度！💎"); 
-        }
-        function save() { 
-            localStorage.setItem('carat_bingo_final', JSON.stringify(gameData)); 
-            saveToCloud(); 
-        }
-        
-        function showHome() { 
-            document.getElementById('page-bingo').classList.remove('active'); 
-            document.getElementById('page-home').classList.add('active'); 
-            updateHeroAvatars();
-            renderPlayers(); 
-        }
-
-        function triggerUpload() { document.getElementById('avatar-input').click(); }
-        function handleAvatarUpload(event) {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    gameData[currentPlayer].avatar = e.target.result;
-                    document.getElementById('current-avatar-box').innerHTML = `<img src="${e.target.result}">`;
-                    save();
-                };
-                reader.readAsDataURL(file);
-            }
-        }
-
-        function updateTimer() {
-            const diff = targetDate - new Date().getTime();
-            if (diff < 0) return;
-            document.getElementById('d').innerText = Math.floor(diff / (1000 * 60 * 60 * 24)).toString().padStart(2, '0');
-            document.getElementById('h').innerText = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)).toString().padStart(2, '0');
-            document.getElementById('m').innerText = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)).toString().padStart(2, '0');
-            document.getElementById('s').innerText = Math.floor((diff % (1000 * 60)) / 1000).toString().padStart(2, '0');
-        }
-
-        init();
-    </script>
+// 正式啟動
+init();
+</script>
 </body>
 </html>
