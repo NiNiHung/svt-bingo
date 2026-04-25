@@ -9,6 +9,41 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@500;700;900&display=swap" rel="stylesheet">
     <style>
+        /* 數據面板容器 */
+.stat-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 25px;
+    padding: 15px 0;
+    margin: 20px 15px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+}
+
+/* 中間的分隔線 */
+.stat-divider {
+    width: 1px;
+    height: 30px;
+    background: #EEEEEE;
+}
+
+/* 數字樣式 (寧靜藍) */
+.stat-value {
+    font-size: 1.8rem;
+    font-weight: 900;
+    color: #92A8D1;
+    line-height: 1;
+}
+
+/* 標籤樣式 (灰字) */
+.stat-label {
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: #AAAAAA;
+    margin-top: 5px;
+    text-transform: capitalize;
+}
         :root { --rose: #F7CAC9; --serenity: #92A8D1; --bg-light: #FFF5F5; --dark: #2D2D2D; --card-bg: #FFFFFF; --glass: rgba(255, 255, 255, 0.3); }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { margin: 0; padding: 0; background-color: var(--bg-light); font-family: 'Noto Sans TC', sans-serif; color: var(--dark); display: flex; flex-direction: column; align-items: center; }
@@ -183,7 +218,23 @@
                 
                 <div class="bingo-board" id="bingo-grid"></div>
             </div>
-
+<div class="stat-container">
+            <div style="text-align: center; flex: 1;">
+                <div id="stat-cells" class="stat-value">0</div>
+                <div class="stat-label">Done</div>
+            </div>
+            <div class="stat-divider"></div>
+            <div style="text-align: center; flex: 1;">
+                <div id="stat-lines" class="stat-value">0</div>
+                <div class="stat-label">Bingo</div>
+            </div>
+        </div>
+        <div style="text-align: center; margin-top: 10px;">
+            <div class="bias-toggle-btn" onclick="nextBias()">
+                <img id="bias-btn-img" src="" style="width: 80%; height: 80%; object-fit: contain;">
+            </div>
+            <div style="font-size: 0.65rem; color: #BBBBBB; font-weight: 800; letter-spacing: 1px; margin-top: 8px;">SWITCH STAMP</div>
+        </div>
             <div class="controls">
                 <div style="grid-column: span 2; text-align: center;">
                     <div class="bias-toggle-btn" onclick="nextBias()"><img id="bias-btn-img" src=""></div>
@@ -378,9 +429,33 @@
                     cell.onmouseup = cell.ontouchend = () => {
                         clearTimeout(pressTimer);
                     };
+                    const cellsEl = document.getElementById('stat-cells');
+    const linesEl = document.getElementById('stat-lines');
+    const data = gameData[currentPlayer];
+
+    if (cellsEl) {
+        cellsEl.innerText = data.grid.filter(g => g.marked).length;
+    }
+    if (linesEl) {
+        linesEl.innerText = calculateBingos(data.grid);
+    }
+}
                 }
                 gridContainer.appendChild(cell);
             });
+        // ... renderGrid 結束後 ...
+
+function calculateBingos(grid) {
+    const lines = [
+        [0, 1, 2], [3, 4, 5], [6, 7, 8], // 橫
+        [0, 3, 6], [1, 4, 7], [2, 5, 8], // 縱
+        [0, 4, 8], [2, 4, 6]             // 斜
+    ];
+    return lines.filter(l => l.every(idx => grid[idx].marked)).length;
+}
+
+// ... 接下來是下一個功能 ...
+    
         }
 
         function toggleMark(idx) {
