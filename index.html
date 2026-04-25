@@ -219,30 +219,28 @@
                 <div class="bingo-board" id="bingo-grid"></div>
             </div>
 <div class="stat-container">
-            <div style="text-align: center; flex: 1;">
-                <div id="stat-cells" class="stat-value">0</div>
-                <div class="stat-label">Done</div>
-            </div>
-            <div class="stat-divider"></div>
-            <div style="text-align: center; flex: 1;">
-                <div id="stat-lines" class="stat-value">0</div>
-                <div class="stat-label">Bingo</div>
-            </div>
-        </div>
-        <div style="text-align: center; margin-top: 10px;">
-            <div class="bias-toggle-btn" onclick="nextBias()">
-                <img id="bias-btn-img" src="" style="width: 80%; height: 80%; object-fit: contain;">
-            </div>
-            <div style="font-size: 0.65rem; color: #BBBBBB; font-weight: 800; letter-spacing: 1px; margin-top: 8px;">SWITCH STAMP</div>
-        </div>
-            <div class="controls">
-                <div style="grid-column: span 2; text-align: center;">
-                    <div class="bias-toggle-btn" onclick="nextBias()"><img id="bias-btn-img" src=""></div>
-                    <span style="font-size: 0.6rem; color: #999; font-weight: 700;">SWITCH STAMP</span>
-                </div>
-                <button id="lock-btn" class="btn btn-rose" onclick="shuffleAndLock()">🎲 隨機並鎖定</button>
-                <button id="save-btn" class="btn btn-serenity" onclick="manualSave()">💾 點我儲存</button>
-            </div>
+    <div style="text-align: center; flex: 1;">
+        <div id="stat-cells" class="stat-value">0</div>
+        <div class="stat-label">Done</div>
+    </div>
+    <div class="stat-divider"></div>
+    <div style="text-align: center; flex: 1;">
+        <div id="stat-lines" class="stat-value">0</div>
+        <div class="stat-label">Bingo</div>
+    </div>
+</div>
+
+<div style="text-align: center; margin-top: 10px;">
+    <div class="bias-toggle-btn" onclick="nextBias()">
+        <img id="bias-btn-img" src="" style="width: 80%; height: 80%; object-fit: contain;">
+    </div>
+    <div style="font-size: 0.65rem; color: #BBBBBB; font-weight: 800; letter-spacing: 1px; margin-top: 8px;">SWITCH STAMP</div>
+</div>
+
+<div class="controls">
+    <button id="lock-btn" class="btn btn-rose" onclick="shuffleAndLock()">🎲 隨機並鎖定</button>
+    <button id="save-btn" class="btn btn-serenity" onclick="manualSave()">💾 點我儲存</button>
+</div>
         </div>
     </div>
 
@@ -389,49 +387,55 @@
             renderGrid();
         }
 
-        function renderGrid() {
-            const gridContainer = document.getElementById('bingo-grid');
-            gridContainer.innerHTML = "";
-            const data = gameData[currentPlayer];
-
-            document.getElementById('lock-btn').style.display = data.locked ? "none" : "block";
-            document.getElementById('save-btn').style.display = data.locked ? "none" : "block";
-
-            data.grid.forEach((item, i) => {
-                const cell = document.createElement('div');
-                cell.className = `cell ${item.marked ? 'marked' : ''}`;
-                
-                if (!data.locked) {
-                    const area = document.createElement('textarea');
-                    area.value = item.text;
-                    area.placeholder = i === 4 ? "自由格" : "輸入目標";
-                    area.oninput = (e) => { data.grid[i].text = e.target.value; };
-                    cell.appendChild(area);
-                } else {
-                    const txt = document.createElement('div');
-                    txt.className = "cell-text";
-                    txt.innerText = item.text;
-                    cell.appendChild(txt);
-                    
-                    if (item.marked) {
-                        const s = document.createElement('img');
-                        s.className = "stamp-img";
-                        s.src = localIcons[data.biasIdx];
-                        cell.appendChild(s);
-                    }
-
-                    cell.onclick = () => toggleMark(i);
-                    
-                    let pressTimer;
-                    cell.onmousedown = cell.ontouchstart = () => {
-                        pressTimer = setTimeout(() => openNote(i), 600);
-                    };
-                    cell.onmouseup = cell.ontouchend = () => {
-                        clearTimeout(pressTimer);
-                    };
-                    const cellsEl = document.getElementById('stat-cells');
-    const linesEl = document.getElementById('stat-lines');
+       function renderGrid() {
+    const gridContainer = document.getElementById('bingo-grid');
+    gridContainer.innerHTML = "";
     const data = gameData[currentPlayer];
+
+    // 1. 處理控制按鈕顯示狀態
+    document.getElementById('lock-btn').style.display = data.locked ? "none" : "block";
+    document.getElementById('save-btn').style.display = data.locked ? "none" : "block";
+
+    // 2. 渲染格子
+    data.grid.forEach((item, i) => {
+        const cell = document.createElement('div');
+        cell.className = `cell ${item.marked ? 'marked' : ''}`;
+        
+        if (!data.locked) {
+            const area = document.createElement('textarea');
+            area.value = item.text;
+            area.placeholder = i === 4 ? "自由格" : "輸入目標";
+            area.oninput = (e) => { data.grid[i].text = e.target.value; };
+            cell.appendChild(area);
+        } else {
+            const txt = document.createElement('div');
+            txt.className = "cell-text";
+            txt.innerText = item.text;
+            cell.appendChild(txt);
+            
+            if (item.marked) {
+                const s = document.createElement('img');
+                s.className = "stamp-img";
+                s.src = localIcons[data.biasIdx];
+                cell.appendChild(s);
+            }
+
+            cell.onclick = () => toggleMark(i);
+            
+            let pressTimer;
+            cell.onmousedown = cell.ontouchstart = () => {
+                pressTimer = setTimeout(() => openNote(i), 600);
+            };
+            cell.onmouseup = cell.ontouchend = () => {
+                clearTimeout(pressTimer);
+            };
+        }
+        gridContainer.appendChild(cell);
+    });
+
+    // 3. 更新統計數據 (必須放在 forEach 迴圈之外)
+    const cellsEl = document.getElementById('stat-cells');
+    const linesEl = document.getElementById('stat-lines');
 
     if (cellsEl) {
         cellsEl.innerText = data.grid.filter(g => g.marked).length;
@@ -440,11 +444,8 @@
         linesEl.innerText = calculateBingos(data.grid);
     }
 }
-                }
-                gridContainer.appendChild(cell);
-            });
-        // ... renderGrid 結束後 ...
 
+// 統一的連線計算函式 (刪除原本代碼中重複的這段)
 function calculateBingos(grid) {
     const lines = [
         [0, 1, 2], [3, 4, 5], [6, 7, 8], // 橫
@@ -453,7 +454,6 @@ function calculateBingos(grid) {
     ];
     return lines.filter(l => l.every(idx => grid[idx].marked)).length;
 }
-
 // ... 接下來是下一個功能 ...
     
         }
