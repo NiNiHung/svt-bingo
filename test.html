@@ -54,7 +54,7 @@
         }
         .player-subtitle { font-size: 0.55rem; font-weight: 700; letter-spacing: 1.5px; opacity: 0.8; margin-top: 4px; margin-bottom: 12px; z-index: 3; position: relative; }
         
-       /* --- 浮水印層級與位置精調 --- */
+/* --- 浮水印層級與位置精調 --- */
 #watermark-overlay { 
     position: absolute; 
     top: 0; left: 0; 
@@ -81,7 +81,7 @@
     mix-blend-mode: screen; 
 }
 
-/* 然然專用修正 */
+/* 然然專用修正：讓蝴蝶結剛好鎖定在中間 */
 .wm-ran-top { 
     width: 35% !important; 
     top: -5px !important;  
@@ -92,6 +92,11 @@
     top: 50% !important;   /* 鎖定自由格中心 */
     left: 50% !important; 
     transform: translate(-50%, -50%) !important; 
+}
+
+/* 雅雯與金妮的鏡像翻轉 */
+.wm-mirror { 
+    transform: translate(-50%, -50%) scaleX(-1) !important; 
 }
 2. JavaScript 區塊 (關鍵修正)
 在妳的 openBingo 函式裡，這一段邏輯要確保 isRan 的判斷正確，否則然然的蝴蝶結位置會抓錯：
@@ -408,68 +413,55 @@ if (wmImg) {
             list.appendChild(card);
         });
     }
-async function openBingo(name) {
-        currentPlayer = name;
+function openBingo(name) {
+    currentPlayer = name;
+    // ... (原本的初始化資料邏輯保持不變) ...
 
-        // 1. 先顯示頁面，讓使用者感覺不到卡頓
-        document.getElementById('page-home').classList.remove('active');
-        document.getElementById('page-bingo').classList.add('active');
-
-        // 2. 顯示基本文字（避免還沒抓到資料前是空白）
-        document.getElementById('current-player-name').innerText = name;
-        
-        // 3. 強力同步資料
-        await loadFromCloud(); 
-
-        // 4. 同步完後，確保該玩家有資料物件
-        if (!gameData[name]) {
-            gameData[name] = {
-                grid: Array(9).fill().map((_, i) => ({ text: i === 4 ? "自由格" : "", marked: i === 4, note: "" })),
-                biasIdx: 0, locked: false, avatar: ""
-            };
-        }
-
-        // 5. 更新頭貼
-        document.getElementById('current-avatar-box').innerHTML = gameData[name].avatar ? `<img src="${gameData[name].avatar}">` : "💎";
-        
-        // 6. 設定背景與浮水印
-        const captureZone = document.getElementById('bingo-capture-zone');
-        const wmOverlay = document.getElementById('watermark-overlay');
-        wmOverlay.innerHTML = ""; 
+    document.getElementById('page-home').classList.remove('active');
+    document.getElementById('page-bingo').classList.add('active');
+    document.getElementById('current-player-name').innerText = name;
+    document.getElementById('current-avatar-box').innerHTML = gameData[name].avatar ? `<img src="${gameData[name].avatar}">` : "💎";
+    
+    // --- 浮水印邏輯開始 ---
+    const captureZone = document.getElementById('bingo-capture-zone');
+    const wmOverlay = document.getElementById('watermark-overlay');
+    wmOverlay.innerHTML = ""; // 每次切換先清空，才不會蝴蝶疊蝴蝶結
 
     let wmImg = "";
-let isRan = (name === "然然"); // 確保這行有寫對
+    let isRan = (name === "然然");
 
-if (name === "雅雯" || name === "金妮") {
-    captureZone.style.background = "linear-gradient(135deg, #273445, #296985, #93A6AE)";
-    wmImg = "./蝴蝶.png";
-} else if (isRan) {
-    captureZone.style.background = "linear-gradient(135deg, var(--rose), var(--serenity))";
-    wmImg = "./蝴蝶結.png";
-}
-
-if (wmImg) {
-    const imgTop = document.createElement('img');
-    imgTop.src = wmImg; 
-    // 這邊會根據是不是然然，套用不同的 Class
-    imgTop.className = isRan ? "wm-style-top wm-ran-top" : "wm-style-top";
-    wmOverlay.appendChild(imgTop);
-
-    const imgMid = document.createElement('img');
-    imgMid.src = wmImg; 
-    imgMid.className = isRan ? "wm-style-mid wm-ran-mid" : "wm-style-mid";
-    
-    // 雅雯和金妮的要翻轉
+    // 根據玩家決定背景色與圖片
     if (name === "雅雯" || name === "金妮") {
-        imgMid.classList.add('wm-mirror'); 
+        captureZone.style.background = "linear-gradient(135deg, #273445, #296985, #93A6AE)";
+        wmImg = "./蝴蝶.png";
+    } else if (isRan) {
+        captureZone.style.background = "linear-gradient(135deg, var(--rose), var(--serenity))";
+        wmImg = "./蝴蝶結.png";
     }
-    wmOverlay.appendChild(imgMid);
-}
 
-        // 7. 最後執行 UI 渲染
-        updateBiasUI();
-        renderGrid();
+    if (wmImg) {
+        // 生成左上角浮水印
+        const imgTop = document.createElement('img');
+        imgTop.src = wmImg; 
+        imgTop.className = isRan ? "wm-style-top wm-ran-top" : "wm-style-top";
+        wmOverlay.appendChild(imgTop);
+
+        // 生成中間（自由格上方）浮水印
+        const imgMid = document.createElement('img');
+        imgMid.src = wmImg; 
+        imgMid.className = isRan ? "wm-style-mid wm-ran-mid" : "wm-style-mid";
+        
+        // 雅雯和金妮的做翻轉處理
+        if (name === "雅雯" || name === "金妮") {
+            imgMid.classList.add('wm-mirror'); 
+        }
+        wmOverlay.appendChild(imgMid);
     }
+    // --- 浮水印邏輯結束 ---
+
+    updateBiasUI();
+    renderGrid();
+}
 function renderGrid() {
     const gridContainer = document.getElementById('bingo-grid');
     if (!gridContainer) return;
