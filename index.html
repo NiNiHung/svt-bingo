@@ -214,6 +214,17 @@
 
         // ... 前面是初始化 supabase 的兩行 ...
 const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
+        // --- 💎 補回遺失的核心變數 💎 ---
+        const players = ["金妮", "然然", "雅雯"];
+        // 這裡對應妳的印章圖檔
+        const localIcons = ["./虎.png", "./飯糰.png", "./橘子.png"]; 
+        // 這裡設定倒數計時的目標日期
+        const targetDate = new Date("2026-07-31T00:00:00").getTime();
+        
+        let currentPlayer = "";
+        let currentNoteIdx = -1;
+        let gameData = {};
+        // ------------------------------
 
 // --- 💎 補全這兩個關鍵的雲端同步函數 💎 ---
 async function saveToCloud() {
